@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi Pondok Pesantren Ali Baharuddin Padang Lawas</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HTML2PDF CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Firebase SDKs (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+        }
+        .arabic-text {
+            font-family: 'Amiri', serif;
+        }
+        .kop-border {
+            border-bottom: 4px double #0f172a;
+        }
+        .modal-animate {
+            animation: slideInCenter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideInCenter {
+            0% { transform: translateY(15px) scale(0.97); opacity: 0; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="bg-gradient-to-r from-emerald-900 to-teal-900 text-white shadow-lg sticky top-0 z-50 border-b border-emerald-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center space-x-3 cursor-pointer group" onclick="showSection('home')">
+                    <div class="w-12 h-12 rounded-full bg-white text-emerald-900 flex items-center justify-center text-xl font-bold shadow-inner overflow-hidden border-2 border-amber-400">
+                        <i class="fas fa-mosque text-emerald-800" id="nav-logo-icon"></i>
+                        <img id="nav-logo-img" src="" class="w-full h-full object-cover hidden" alt="Logo">
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight sm:text-xl group-hover:text-amber-300 transition" id="header-brand-title">Pondok Pesantren Ali Baharuddin</h1>
+                        <p class="text-xs text-emerald-200 arabic-text tracking-wide">معهد على بحر الدين فدانغ لاواس</p>
+                    </div>
+                </div>
+
+                <!-- RIGHT NAV ACTIONS & HAMBURGER MENU -->
+                <div class="flex items-center space-x-3">
+                    <div id="user-info-nav" class="hidden flex items-center space-x-3">
+                        <span id="user-display-name" class="text-xs sm:text-sm font-semibold bg-emerald-800/80 px-3.5 py-1.5 rounded-full border border-emerald-600 shadow-inner"></span>
+                        <button id="btn-admin-setting" onclick="openAdminSettingModal()" class="hidden bg-amber-500 hover:bg-amber-400 text-slate-900 p-2 rounded-xl text-xs sm:text-sm transition shadow items-center justify-center w-9 h-9" title="Setting Akun Admin">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <button onclick="logout()" class="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3.5 py-1.5 rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5 shadow">
+                            <i class="fas fa-sign-out-alt"></i> Keluar
+                        </button>
+                    </div>
+
+                    <button onclick="toggleMobileMenu()" class="bg-emerald-800 hover:bg-emerald-700 p-2.5 rounded-xl text-white transition shadow border border-emerald-600 flex items-center justify-center w-11 h-11">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DROPDOWN NAVIGASI SISTEM -->
+        <div id="system-nav-dropdown" class="hidden bg-emerald-950 border-t border-emerald-800 px-6 py-4 space-y-3 transition transform origin-top">
+            <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center text-sm font-medium">
+                <span class="text-emerald-300 text-xs font-bold uppercase tracking-wider"><i class="fas fa-compass me-1"></i> Navigasi Cepat Sistem</span>
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="toggleMobileMenu(); showSection('home');" class="hover:text-amber-300 transition px-3 py-1.5 rounded-lg bg-emerald-900/60"><i class="fas fa-home me-1"></i> Beranda</button>
+                    <button onclick="toggleMobileMenu(); openLoginModal();" class="hover:text-amber-300 transition px-3 py-1.5 rounded-lg bg-emerald-900/60"><i class="fas fa-sign-in-alt me-1"></i> Masuk Sistem</button>
+                    <button onclick="toggleMobileMenu(); openRegisterModal();" class="hover:text-amber-300 transition px-3 py-1.5 rounded-lg bg-amber-600 text-slate-900 font-bold"><i class="fas fa-user-plus me-1"></i> Pendaftaran Staff</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- SECTION: HOME -->
+        <section id="section-home" class="space-y-8">
+            <div class="bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 rounded-3xl p-8 sm:p-14 text-white shadow-2xl relative overflow-hidden border border-emerald-700/50">
+                <div class="relative z-10 max-w-3xl space-y-4">
+                    <span class="bg-amber-400 text-slate-900 text-xs font-extrabold px-3.5 py-1 rounded-full uppercase tracking-wider inline-block shadow">Sistem Absensi Real-Time Online</span>
+                    <h2 class="text-3xl sm:text-5xl font-extrabold leading-tight" id="home-hero-title">Pondok Pesantren Ali Baharuddin</h2>
+                    <p class="text-emerald-100 text-base sm:text-lg leading-relaxed" id="home-hero-desc">Sistem Informasi Pengelolaan & Absensi Ketidakhadiran Santri & Santriah secara real-time.</p>
+                    <div class="pt-2 flex flex-wrap gap-4">
+                        <button onclick="openLoginModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-extrabold px-7 py-3.5 rounded-2xl shadow-xl transition flex items-center gap-2 transform hover:-translate-y-0.5">
+                            <i class="fas fa-user-check text-lg"></i> Masuk Sistem Absensi
+                        </button>
+                    </div>
+                </div>
+                <div class="absolute -right-12 -bottom-12 opacity-10 text-white pointer-events-none">
+                    <i class="fas fa-mosque text-[320px]"></i>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-white p-7 rounded-3xl shadow-lg border border-slate-200/80 hover:shadow-xl transition">
+                    <div class="flex items-center space-x-3 mb-4 text-emerald-800">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-800 font-bold"><i class="fas fa-university"></i></div>
+                        <h3 class="text-xl font-bold">Profil Pesantren</h3>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed text-sm sm:text-base" id="home-profil-text">
+                        Pondok Pesantren Ali Baharuddin Padang Lawas mendidik generasi Rabbani.
+                    </p>
+                </div>
+
+                <div class="bg-white p-7 rounded-3xl shadow-lg border border-slate-200/80 hover:shadow-xl transition">
+                    <div class="flex items-center space-x-3 mb-4 text-emerald-800">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-800 font-bold"><i class="fas fa-bullseye"></i></div>
+                        <h3 class="text-xl font-bold">Visi & Misi</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider text-emerald-700 mb-1">Visi</h4>
+                            <p class="text-slate-600 text-sm" id="home-visi-text">Menjadi pusat keunggulan pendidikan Islam.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider text-emerald-700 mb-1">Misi</h4>
+                            <p class="text-slate-600 text-sm whitespace-pre-line" id="home-misi-text">1. Menyelenggarakan pendidikan terpadu.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: DASHBOARD STAFF -->
+        <section id="section-staff" class="hidden space-y-6">
+            <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-slate-200/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Dashboard Staff Guru / Ummi</h2>
+                    <p class="text-slate-500 text-sm">Absensi Harian & Sholat 5 Waktu Santri/ah</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="switchStaffTab('absensi-kegiatan')" id="tab-btn-absensi-kegiatan" class="bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow">Absensi Kegiatan</button>
+                    <button onclick="switchStaffTab('absensi-sholat')" id="tab-btn-absensi-sholat" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold">Absensi Sholat</button>
+                    <button onclick="switchStaffTab('rekap-umum')" id="tab-btn-rekap-umum" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold">Rekap Umum</button>
+                    <button onclick="switchStaffTab('rekap-sholat')" id="tab-btn-rekap-sholat" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold">Rekap Sholat</button>
+                    <button onclick="switchStaffTab('santri')" id="tab-btn-santri" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold">Data Santri</button>
+                </div>
+            </div>
+
+            <!-- SUB-TAB ABSENSI KEGIATAN -->
+            <div id="staff-tab-absensi-kegiatan" class="space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-slate-200/80">
+                    <h3 class="text-lg font-bold text-emerald-800 mb-4 border-b pb-3"><i class="fas fa-clipboard-list"></i> Form Laporkan Ketidakhadiran Kegiatan</h3>
+                    <form id="form-absensi-umum" onsubmit="saveAbsensiUmum(event)" class="space-y-6">
+                        <div class="grid md:grid-cols-3 gap-5">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Kategori / Gender</label>
+                                <select id="abs-umum-kategori" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 bg-slate-50 text-sm" onchange="filterKelasByKategori('abs-umum-kategori', 'abs-umum-kelas')">
+                                    <option value="Pondok (Laki-laki)">Pondok (Santri Laki-laki)</option>
+                                    <option value="Asrama (Perempuan)">Asrama (Santriah Perempuan)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Jenis Kegiatan</label>
+                                <select id="abs-umum-kegiatan" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                                    <option value="Belajar Pagi">Belajar Pagi</option>
+                                    <option value="Majelis Taklim">Majelis Taklim</option>
+                                    <option value="Belajar Malam">Belajar Malam</option>
+                                    <option value="Belajar Subuh">Belajar Subuh</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Pilih Kelas</label>
+                                <select id="abs-umum-kelas" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm" onchange="loadSantriForUmum()"></select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Tanggal Kegiatan</label>
+                            <input type="date" id="abs-umum-tanggal" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm" required>
+                        </div>
+
+                        <div class="border border-slate-200 rounded-2xl overflow-hidden">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-rose-50 text-xs font-bold uppercase text-rose-800">
+                                    <tr>
+                                        <th class="p-3.5 text-center w-20">Tidak Hadir</th>
+                                        <th class="p-3.5">Nama Santri/ah</th>
+                                        <th class="p-3.5">Alasan Ketidakhadiran</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="list-santri-umum-body" class="divide-y divide-slate-100 text-sm">
+                                    <tr><td colspan="3" class="p-4 text-center text-slate-400">Pilih kelas terlebih dahulu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-rose-700 hover:bg-rose-800 text-white font-bold px-7 py-3 rounded-xl shadow transition">Simpan Ketidakhadiran</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- SUB-TAB ABSENSI SHOLAT -->
+            <div id="staff-tab-absensi-sholat" class="hidden space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-slate-200/80">
+                    <h3 class="text-lg font-bold text-emerald-800 mb-4 border-b pb-3"><i class="fas fa-kaaba"></i> Form Absensi Sholat 5 Waktu</h3>
+                    <form id="form-absensi-sholat" onsubmit="saveAbsensiSholat(event)" class="space-y-6">
+                        <div class="grid md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Kategori / Gender</label>
+                                <select id="abs-sholat-kategori" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 bg-slate-50 text-sm" onchange="filterKelasByKategori('abs-sholat-kategori', 'abs-sholat-kelas')">
+                                    <option value="Pondok (Laki-laki)">Pondok (Santri Laki-laki)</option>
+                                    <option value="Asrama (Perempuan)">Asrama (Santriah Perempuan)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Waktu Sholat</label>
+                                <select id="abs-sholat-waktu" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm" required>
+                                    <option value="Sholat Subuh">Sholat Subuh</option>
+                                    <option value="Sholat Dzuhur">Sholat Dzuhur</option>
+                                    <option value="Sholat Ashar">Sholat Ashar</option>
+                                    <option value="Sholat Maghrib">Sholat Maghrib</option>
+                                    <option value="Sholat Isya">Sholat Isya</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Pilih Kelas</label>
+                                <select id="abs-sholat-kelas" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm" onchange="loadSantriForSholat()"></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Tanggal Sholat</label>
+                                <input type="date" id="abs-sholat-tanggal" class="w-full border border-slate-300 rounded-xl px-3.5 py-2 text-sm" required>
+                            </div>
+                        </div>
+
+                        <div class="border border-slate-200 rounded-2xl overflow-hidden">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-emerald-50 text-xs font-bold uppercase text-emerald-900">
+                                    <tr>
+                                        <th class="p-3.5 text-center w-20">Tidak Hadir</th>
+                                        <th class="p-3.5">Nama Santri/ah</th>
+                                        <th class="p-3.5">Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="list-santri-sholat-body" class="divide-y divide-slate-100 text-sm">
+                                    <tr><td colspan="3" class="p-4 text-center text-slate-400">Pilih kelas terlebih dahulu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-7 py-3 rounded-xl shadow transition">Simpan Absensi Sholat</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- STAFF TAB SANTRI & REKAP (Simplified UI containers) -->
+            <div id="staff-tab-santri" class="hidden space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-lg">
+                    <h3 class="text-lg font-bold text-emerald-800 mb-4">Data Santri/ah Per-Kelas</h3>
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <select id="filter-santri-kategori" class="w-full border rounded-xl p-2.5 text-sm" onchange="filterKelasByKategori('filter-santri-kategori', 'filter-santri-kelas'); renderTableSantri();">
+                                <option value="Pondok (Laki-laki)">Pondok (Santri Laki-laki)</option>
+                                <option value="Asrama (Perempuan)">Asrama (Santriah Perempuan)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="filter-santri-kelas" class="w-full border rounded-xl p-2.5 text-sm" onchange="renderTableSantri()"></select>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto border rounded-2xl">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-100 uppercase text-xs font-bold">
+                                <tr>
+                                    <th class="p-3">Nama</th><th class="p-3">Gender</th><th class="p-3">Kelas</th><th class="p-3">Wali / Ortua</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-santri-body" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: DASHBOARD ADMIN -->
+        <section id="section-admin" class="hidden space-y-6">
+            <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-slate-200/80">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">Super Admin Panel (Cloud Live)</span>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Dashboard Pimpinan / Admin</h2>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="switchAdminTab('santri')" id="admin-tab-btn-santri" class="bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold"><i class="fas fa-users"></i> Data Santri</button>
+                        <button onclick="switchAdminTab('approval')" id="admin-tab-btn-approval" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold"><i class="fas fa-user-shield"></i> Staff Approval</button>
+                        <button onclick="switchAdminTab('kelas')" id="admin-tab-btn-kelas" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold"><i class="fas fa-school"></i> Kelas</button>
+                        <button onclick="switchAdminTab('home-edit')" id="admin-tab-btn-home-edit" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold"><i class="fas fa-home"></i> Edit Beranda</button>
+                        <button onclick="switchAdminTab('kop')" id="admin-tab-btn-kop" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold"><i class="fas fa-heading"></i> Edit KOP</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMIN TAB: EDIT BERANDA -->
+            <div id="admin-tab-home-edit" class="space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-lg border max-w-3xl mx-auto">
+                    <h3 class="text-lg font-bold text-emerald-800 mb-4"><i class="fas fa-home"></i> Edit Visi, Misi & Profile Beranda</h3>
+                    <form onsubmit="saveHomeSettings(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1">Judul Utama</label>
+                            <input type="text" id="edit-home-title" class="w-full border rounded-xl p-2.5 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1">Deskripsi Singkat</label>
+                            <textarea id="edit-home-desc" rows="2" class="w-full border rounded-xl p-2.5 text-sm" required></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1">Profil Pesantren</label>
+                            <textarea id="edit-home-profil" rows="3" class="w-full border rounded-xl p-2.5 text-sm" required></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1">Teks Visi</label>
+                            <textarea id="edit-home-visi" rows="2" class="w-full border rounded-xl p-2.5 text-sm" required></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1">Teks Misi</label>
+                            <textarea id="edit-home-misi" rows="3" class="w-full border rounded-xl p-2.5 text-sm" required></textarea>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-emerald-800 text-white font-bold px-7 py-3 rounded-xl shadow">Simpan Ke Cloud Firestore</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ADMIN TAB: DATA SANTRI -->
+            <div id="admin-tab-santri" class="hidden space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-lg">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-emerald-800">Kelola Data Santri Online</h3>
+                        <button onclick="openModalSantri()" class="bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl"><i class="fas fa-plus"></i> Tambah Santri Baru</button>
+                    </div>
+                    <div class="overflow-x-auto border rounded-2xl">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-100 uppercase text-xs font-bold">
+                                <tr>
+                                    <th class="p-3">Nama</th><th class="p-3">Gender</th><th class="p-3">Kelas</th><th class="p-3">Ayah/Ibu</th><th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-table-santri-body" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMIN TAB: APPROVAL STAFF -->
+            <div id="admin-tab-approval" class="hidden space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-lg">
+                    <h3 class="text-lg font-bold text-emerald-800 mb-4">Persetujuan Pendaftaran Staff</h3>
+                    <div class="overflow-x-auto border rounded-2xl">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-100 uppercase text-xs font-bold">
+                                <tr>
+                                    <th class="p-3">Nama</th><th class="p-3">Role</th><th class="p-3">No WA</th><th class="p-3">Status</th><th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-approval-body" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL LOGIN -->
+    <div id="modal-login" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 relative modal-animate">
+            <button onclick="closeLoginModal()" class="absolute top-5 right-5 text-slate-400"><i class="fas fa-times"></i></button>
+            <h3 class="text-xl font-bold text-slate-900 text-center mb-4">Masuk Sistem Online</h3>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">Email / Nama / Inisial</label>
+                    <input type="text" id="login-identifier" class="w-full border rounded-xl p-3 text-sm" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">Password</label>
+                    <input type="password" id="login-password" class="w-full border rounded-xl p-3 text-sm" required>
+                </div>
+                <button type="submit" class="w-full bg-emerald-800 text-white font-bold py-3 rounded-xl shadow">Masuk Sekarang</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL SANTRI -->
+    <div id="modal-santri" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-7 relative modal-animate">
+            <button onclick="closeModalSantri()" class="absolute top-5 right-5 text-slate-400"><i class="fas fa-times"></i></button>
+            <h3 class="text-lg font-bold mb-4" id="modal-santri-title">Tambah Santri</h3>
+            <form onsubmit="saveSantri(event)" class="space-y-3">
+                <input type="hidden" id="santri-edit-id">
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">Nama Lengkap</label>
+                    <input type="text" id="santri-nama" class="w-full border rounded-xl p-2.5 text-sm" required>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Gender</label>
+                        <select id="santri-gender" class="w-full border rounded-xl p-2.5 text-sm">
+                            <option value="Santri (Laki-laki)">Santri (Laki-laki)</option>
+                            <option value="Santriah (Perempuan)">Santriah (Perempuan)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Kelas</label>
+                        <input type="text" id="santri-kelas" class="w-full border rounded-xl p-2.5 text-sm" placeholder="Contoh: I-1" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Nama Ayah</label>
+                        <input type="text" id="santri-ayah" class="w-full border rounded-xl p-2.5 text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Nama Ibu</label>
+                        <input type="text" id="santri-ibu" class="w-full border rounded-xl p-2.5 text-sm" required>
+                    </div>
+                </div>
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeModalSantri()" class="bg-slate-200 px-4 py-2 rounded-xl text-xs font-bold">Batal</button>
+                    <button type="submit" class="bg-emerald-800 text-white px-5 py-2 rounded-xl text-xs font-bold">Simpan Cloud</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FIREBASE REAL-TIME LOGIC SCRIPT -->
+    <script>
+        // 1. FIREBASE CONFIGURATION (DIHUBUNGKAN KE FIRESTORE PONPES ALI BAHARUDDIN)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDummyKeyForTemplatePurposes12345", // <-- Ganti dengan API Key Asli
+            authDomain: "ponpes-ali-baharuddin.firebaseapp.com",
+            projectId: "ponpes-ali-baharuddin",
+            storageBucket: "ponpes-ali-baharuddin.firebasestorage.app",
+            messagingSenderId: "1234567890", // <-- Ganti dengan Sender ID Asli
+            appId: "1:1234567890:web:abcdef123456" // <-- Ganti dengan App ID Asli
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // Variable Global State (Real-time synced)
+        let currentSessionUser = JSON.parse(localStorage.getItem('alibaharuddin_session')) || null;
+        let dbSantri = [];
+        let dbStaff = [];
+        let dbKelas = [];
+        let dbHomeContent = {};
+        let dbKop = {};
+
+        // INSIALISASI REAL-TIME LISTENERS (ON SNAPSHOT)
+        window.addEventListener('DOMContentLoaded', () => {
+            initRealTimeDatabase();
+            checkUserSession();
+        });
+
+        function initRealTimeDatabase() {
+            // A. Real-Time Settings / Beranda (Visi, Misi, Profile)
+            db.collection('settings').doc('home').onSnapshot((doc) => {
+                if (doc.exists) {
+                    dbHomeContent = doc.data();
+                    applyHomeContentUI();
+                }
+            });
+
+            // B. Real-Time Data Santri
+            db.collection('santri').onSnapshot((snapshot) => {
+                dbSantri = [];
+                snapshot.forEach((doc) => {
+                    dbSantri.push({ id: doc.id, ...doc.data() });
+                });
+                renderTableSantri();
+                renderAdminTableSantri();
+            });
+
+            // C. Real-Time Data Staff Approval
+            db.collection('staff').onSnapshot((snapshot) => {
+                dbStaff = [];
+                snapshot.forEach((doc) => {
+                    dbStaff.push({ id: doc.id, ...doc.data() });
+                });
+                renderTableApproval();
+            });
+
+            // D. Real-Time Data Kelas
+            db.collection('kelas').onSnapshot((snapshot) => {
+                dbKelas = [];
+                snapshot.forEach((doc) => {
+                    dbKelas.push({ id: doc.id, ...doc.data() });
+                });
+            });
+        }
+
+        // --- HOMEPAGE REAL-TIME UPDATES ---
+        function applyHomeContentUI() {
+            if (!dbHomeContent.title) return;
+            document.getElementById('home-hero-title').innerText = dbHomeContent.title;
+            document.getElementById('home-hero-desc').innerText = dbHomeContent.desc;
+            document.getElementById('home-profil-text').innerText = dbHomeContent.profil;
+            document.getElementById('home-visi-text').innerText = dbHomeContent.visi;
+            document.getElementById('home-misi-text').innerText = dbHomeContent.misi;
+            document.getElementById('header-brand-title').innerText = dbHomeContent.title;
+
+            document.getElementById('edit-home-title').value = dbHomeContent.title || '';
+            document.getElementById('edit-home-desc').value = dbHomeContent.desc || '';
+            document.getElementById('edit-home-profil').value = dbHomeContent.profil || '';
+            document.getElementById('edit-home-visi').value = dbHomeContent.visi || '';
+            document.getElementById('edit-home-misi').value = dbHomeContent.misi || '';
+        }
+
+        function saveHomeSettings(e) {
+            e.preventDefault();
+            const dataToSave = {
+                title: document.getElementById('edit-home-title').value,
+                desc: document.getElementById('edit-home-desc').value,
+                profil: document.getElementById('edit-home-profil').value,
+                visi: document.getElementById('edit-home-visi').value,
+                misi: document.getElementById('edit-home-misi').value
+            };
+
+            // SIMPAN DIRECT KE FIRESTORE CLOUD
+            db.collection('settings').doc('home').set(dataToSave).then(() => {
+                alert('Tampilan Beranda (Visi & Misi) Berhasil Diperbarui secara Real-Time Online!');
+            }).catch((err) => {
+                alert('Gagal menyimpan ke cloud: ' + err.message);
+            });
+        }
+
+        // --- DATA SANTRI REAL-TIME CRUD ---
+        function renderTableSantri() {
+            const tbody = document.getElementById('table-santri-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            dbSantri.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="p-3 font-semibold">${s.nama}</td><td class="p-3 text-xs">${s.gender}</td><td class="p-3 text-xs">${s.kelas}</td><td class="p-3 text-xs">A: ${s.ayah}<br>I: ${s.ibu}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderAdminTableSantri() {
+            const tbody = document.getElementById('admin-table-santri-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            dbSantri.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold">${s.nama}</td>
+                    <td class="p-3 text-xs">${s.gender}</td>
+                    <td class="p-3 text-xs">${s.kelas}</td>
+                    <td class="p-3 text-xs">Ayah: ${s.ayah}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="editSantri('${s.id}')" class="text-amber-600 font-bold mr-2"><i class="fas fa-edit"></i> Edit</button>
+                        <button onclick="deleteSantri('${s.id}')" class="text-rose-600 font-bold"><i class="fas fa-trash"></i> Hapus</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openModalSantri() {
+            document.getElementById('santri-edit-id').value = '';
+            document.getElementById('santri-nama').value = '';
+            document.getElementById('santri-kelas').value = '';
+            document.getElementById('santri-ayah').value = '';
+            document.getElementById('santri-ibu').value = '';
+            document.getElementById('modal-santri').classList.remove('hidden');
+        }
+        function closeModalSantri() { document.getElementById('modal-santri').classList.add('hidden'); }
+
+        function saveSantri(e) {
+            e.preventDefault();
+            const id = document.getElementById('santri-edit-id').value;
+            const payload = {
+                nama: document.getElementById('santri-nama').value,
+                gender: document.getElementById('santri-gender').value,
+                kelas: document.getElementById('santri-kelas').value,
+                ayah: document.getElementById('santri-ayah').value,
+                ibu: document.getElementById('santri-ibu').value
+            };
+
+            if (id) {
+                db.collection('santri').doc(id).update(payload).then(() => {
+                    closeModalSantri();
+                });
+            } else {
+                db.collection('santri').add(payload).then(() => {
+                    closeModalSantri();
+                });
+            }
+        }
+
+        function editSantri(id) {
+            const s = dbSantri.find(item => item.id === id);
+            if (!s) return;
+            document.getElementById('santri-edit-id').value = s.id;
+            document.getElementById('santri-nama').value = s.nama;
+            document.getElementById('santri-gender').value = s.gender;
+            document.getElementById('santri-kelas').value = s.kelas;
+            document.getElementById('santri-ayah').value = s.ayah;
+            document.getElementById('santri-ibu').value = s.ibu;
+            document.getElementById('modal-santri').classList.remove('hidden');
+        }
+
+        function deleteSantri(id) {
+            if (confirm('Hapus santri ini dari Cloud Database?')) {
+                db.collection('santri').doc(id).delete();
+            }
+        }
+
+        // --- ABSENSI REAL-TIME SIMPAN KE FIRESTORE ("Data Ali Baharuddin") ---
+        function saveAbsensiUmum(e) {
+            e.preventDefault();
+            const kegiatan = document.getElementById('abs-umum-kegiatan').value;
+            const tanggal = document.getElementById('abs-umum-tanggal').value;
+            let count = 0;
+
+            const batch = db.batch();
+            dbSantri.forEach(s => {
+                const cb = document.getElementById(`abs_u_${s.id}`);
+                if (cb && cb.checked) {
+                    count++;
+                    const docRef = db.collection('Data Ali Baharuddin').doc();
+                    batch.set(docRef, {
+                        type: 'umum',
+                        santriId: s.id,
+                        santriNama: s.nama,
+                        kegiatan: kegiatan,
+                        tanggal: tanggal,
+                        status: 'TIDAK HADIR'
+                    });
+                }
+            });
+
+            batch.commit().then(() => {
+                alert(`Berhasil menyimpan ${count} absensi kegiatan ke Cloud Firestore!`);
+            });
+        }
+
+        // --- STAFF APPROVAL ---
+        function renderTableApproval() {
+            const tbody = document.getElementById('table-approval-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            dbStaff.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold">${s.nama}</td>
+                    <td class="p-3 text-xs">${s.role}</td>
+                    <td class="p-3 text-xs">${s.wa || '-'}</td>
+                    <td class="p-3 text-xs font-bold text-amber-600">${s.status || 'PENDING'}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="approveStaff('${s.id}')" class="bg-emerald-600 text-white text-xs px-2 py-1 rounded font-bold">Approve</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function approveStaff(id) {
+            db.collection('staff').doc(id).update({ status: 'APPROVED' });
+        }
+
+        // --- AUTH & NAVIGATION SYSTEM ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const iden = document.getElementById('login-identifier').value.trim();
+            const pass = document.getElementById('login-password').value;
+
+            if (iden.toLowerCase() === 'admin' && pass === 'Pimpinan01') {
+                currentSessionUser = { nama: 'Pimpinan / Admin', role: 'Admin / Pimpinan' };
+                localStorage.setItem('alibaharuddin_session', JSON.stringify(currentSessionUser));
+                closeLoginModal();
+                checkUserSession();
+            } else {
+                alert('Username/Password Admin salah.');
+            }
+        }
+
+        function checkUserSession() {
+            if (currentSessionUser) {
+                document.getElementById('user-info-nav').classList.remove('hidden');
+                document.getElementById('user-display-name').innerText = currentSessionUser.nama;
+                showSection(currentSessionUser.role === 'Admin / Pimpinan' ? 'admin' : 'staff');
+            } else {
+                document.getElementById('user-info-nav').classList.add('hidden');
+                showSection('home');
+            }
+        }
+
+        function logout() {
+            currentSessionUser = null;
+            localStorage.removeItem('alibaharuddin_session');
+            checkUserSession();
+        }
+
+        function showSection(id) {
+            ['home', 'staff', 'admin'].forEach(s => document.getElementById('section-' + s).classList.add('hidden'));
+            document.getElementById('section-' + id).classList.remove('hidden');
+        }
+
+        function switchAdminTab(tab) {
+            ['santri', 'approval', 'kelas', 'home-edit', 'kop'].forEach(t => {
+                const el = document.getElementById('admin-tab-' + t);
+                if (el) el.classList.add('hidden');
+            });
+            document.getElementById('admin-tab-' + tab).classList.remove('hidden');
+        }
+
+        function openLoginModal() { document.getElementById('modal-login').classList.remove('hidden'); }
+        function closeLoginModal() { document.getElementById('modal-login').classList.add('hidden'); }
+        function toggleMobileMenu() { document.getElementById('system-nav-dropdown').classList.toggle('hidden'); }
+    </script>
+</body>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyA13cQT_hBhzNYIvRenfUnrYocOoD191V4",
+    authDomain: "ponpes-ali-baharuddin-9bfad.firebaseapp.com",
+    projectId: "ponpes-ali-baharuddin-9bfad",
+    storageBucket: "ponpes-ali-baharuddin-9bfad.firebasestorage.app",
+    messagingSenderId: "383573814973",
+    appId: "1:383573814973:web:8f3917285fe8cd86e2d1d4",
+    measurementId: "G-KKTYEXJC0T"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+</html>
