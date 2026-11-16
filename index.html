@@ -1,0 +1,2474 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Pelaporan Kegiatan Pondok & Asrama - Ponpes Ali Baharuddin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Amiri:wght@700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .kop-font { font-family: 'Times New Roman', Times, serif; }
+        .tab-active { border-bottom: 3px solid #065f46; color: #065f46; font-weight: 700; background-color: #ecfdf5; }
+        .pdf-sheet {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm 20mm;
+            margin: auto;
+            background: white;
+            color: black;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        table.pdf-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        table.pdf-table th, table.pdf-table td { border: 1px solid #000; padding: 6px 8px; text-align: left; }
+        table.pdf-table th { background-color: #f3f4f6; text-align: center; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- LOADING OVERLAY AWAL -->
+    <div id="sync-loading" class="fixed inset-0 bg-emerald-950/80 z-50 flex flex-col items-center justify-center text-white">
+        <div class="w-12 h-12 border-4 border-emerald-300 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <p class="font-bold text-sm">Menghubungkan ke Database Online...</p>
+        <p class="text-xs text-emerald-200 mt-1">Firestore: Data Ali Baharuddin</p>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="bg-emerald-800 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="navigate('home')">
+                    <img id="nav-logo" src="https://via.placeholder.com/45/ffffff/065f46?text=AB" alt="Logo" class="h-10 w-10 rounded-full object-cover bg-white p-0.5 border border-emerald-400">
+                    <div>
+                        <h1 class="font-bold text-sm sm:text-base leading-tight" id="nav-title">PONPES ALI BAHARUDDIN</h1>
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs text-emerald-200" id="nav-subtitle">Sistem Pelaporan Pondok & Asrama</p>
+                            <span id="cloud-status" class="inline-flex items-center gap-1 text-[10px] bg-emerald-950/70 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/40">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Online • Sinkron
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <button id="menu-toggle" onclick="toggleMenu()" class="p-2 rounded-lg hover:bg-emerald-700 focus:outline-none flex items-center space-x-2 border border-emerald-600">
+                        <span id="user-badge" class="text-xs font-semibold hidden sm:inline">Menu</span>
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+
+                    <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-xl py-2 text-slate-700 border border-slate-200 z-50">
+                        <button onclick="navigate('home')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 flex items-center space-x-3">
+                            <i class="fas fa-home w-4 text-emerald-700"></i><span>Home / Beranda</span>
+                        </button>
+                        <button id="menu-dashboard" onclick="goToDashboard()" class="hidden w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 flex items-center space-x-3 font-semibold text-emerald-800">
+                            <i class="fas fa-tachometer-alt w-4 text-emerald-700"></i><span>Dashboard Saya</span>
+                        </button>
+                        <button id="menu-login" onclick="navigate('login')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 flex items-center space-x-3">
+                            <i class="fas fa-sign-in-alt w-4 text-emerald-700"></i><span>Login Sistem</span>
+                        </button>
+                        <button id="menu-register" onclick="navigate('register')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 flex items-center space-x-3">
+                            <i class="fas fa-user-plus w-4 text-emerald-700"></i><span>Daftar Guru / Ummi</span>
+                        </button>
+                        <div id="menu-logout-wrap" class="hidden border-t border-slate-100 mt-1 pt-1">
+                            <button onclick="logout()" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3 font-semibold">
+                                <i class="fas fa-sign-out-alt w-4"></i><span>Keluar (Logout)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- 1. HOME / BERANDA -->
+        <section id="view-home" class="space-y-8">
+            <div class="bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800 rounded-2xl p-8 sm:p-12 text-white shadow-xl relative overflow-hidden">
+                <div class="max-w-3xl relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                    <img id="home-logo" src="https://via.placeholder.com/110/ffffff/065f46?text=LOGO" class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white p-2 object-contain shadow-md">
+                    <div class="text-center sm:text-left">
+                        <span class="inline-block bg-emerald-900/60 text-emerald-200 text-xs font-semibold px-3 py-1 rounded-full mb-3 border border-emerald-500/30">SISTEM INFORMASI KEPENGASUHAN (ONLINE REAL-TIME)</span>
+                        <h2 class="text-2xl sm:text-4xl font-bold mb-3" id="home-heading">Sistem Pelaporan Pencatatan Kegiatan Pondok & Asrama</h2>
+                        <p class="text-emerald-100 text-sm sm:text-base leading-relaxed mb-6" id="home-desc">
+                            Portal digital terpadu Pondok Pesantren Ali Baharuddin Padang Lawas untuk pencatatan kehadiran kegiatan Belajar Pagi, Belajar Subuh, Majelis Taklim, Belajar Malam, Sholat 5 Waktu, ketidakhadiran ke pesantren, serta rekapitulasi pelanggaran santri dan santriah.
+                        </p>
+                        <div class="flex flex-wrap justify-center sm:justify-start gap-3">
+                            <button onclick="navigate('login')" class="bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-6 py-3 rounded-xl shadow transition flex items-center gap-2">
+                                <i class="fas fa-sign-in-alt"></i> Masuk Sistem (Login)
+                            </button>
+                            <button onclick="navigate('register')" class="bg-emerald-900/70 hover:bg-emerald-900 text-white border border-emerald-400/40 font-semibold px-6 py-3 rounded-xl transition flex items-center gap-2">
+                                <i class="fas fa-user-plus"></i> Pendaftaran Guru / Ummi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center text-xl mb-4"><i class="fas fa-chalkboard-teacher"></i></div>
+                    <h3 class="font-bold text-lg mb-2">Guru Pondok & Ummi Asrama</h3>
+                    <p class="text-sm text-slate-600">Sistem terpisah antara kelas Putra (Pondok) dan Putri (Asrama). Pencatatan absensi kegiatan harian & sholat 5 waktu secara cepat dan tersinkron online.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="w-12 h-12 bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center text-xl mb-4"><i class="fas fa-layer-group"></i></div>
+                    <h3 class="font-bold text-lg mb-2">Validasi Kepala Pondok & Asrama</h3>
+                    <p class="text-sm text-slate-600">Laporan kegiatan harian dan pencatatan santri tidak hadir ke pesantren terkumpul real-time di Kepala Pondok / Asrama untuk diteruskan ke Pimpinan.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-xl mb-4"><i class="fas fa-file-pdf"></i></div>
+                    <h3 class="font-bold text-lg mb-2">Dashboard Pimpinan & Arsip PDF</h3>
+                    <p class="text-sm text-slate-600">Monitoring real-time antar perangkat, pelacakan jejak pelanggaran santri, manajemen kelas, serta cetak laporan resmi ber-KOP surat.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. LOGIN -->
+        <section id="view-login" class="hidden max-w-md mx-auto bg-white p-8 rounded-2xl shadow-md border border-slate-200">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">Login Sistem</h2>
+                <p class="text-sm text-slate-500 mt-1">Masukkan Inisial / Email dan Password Anda</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Username / Inisial / Email</label>
+                    <input type="text" id="login-username" required placeholder="Contoh: ADMIN, RIZKI, atau email" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-600 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Password</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-600 outline-none">
+                </div>
+                <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-lg transition shadow">Masuk ke Dashboard</button>
+            </form>
+            <div class="mt-6 pt-4 border-t border-slate-100 text-center">
+                <p class="text-sm text-slate-600">Belum memiliki akun Guru / Ummi?</p>
+                <button onclick="navigate('register')" class="mt-2 inline-block text-emerald-700 font-bold hover:underline text-sm">
+                    <i class="fas fa-user-plus mr-1"></i> Klik untuk Pendaftaran Guru / Ummi
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. PENDAFTARAN GURU / UMMI -->
+        <section id="view-register" class="hidden max-w-lg mx-auto bg-white p-8 rounded-2xl shadow-md border border-slate-200">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">Pendaftaran Guru / Ummi</h2>
+                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i> Akun baru harus diverifikasi oleh Pimpinan sebelum dapat masuk ke sistem.
+                </p>
+            </div>
+            <form onsubmit="handleRegister(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Nama Lengkap & Gelar</label>
+                    <input type="text" id="reg-nama" required placeholder="Contoh: Ust. Ahmad Fauzi, S.Pd" class="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-emerald-600">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Inisial (Huruf Kapital)</label>
+                        <input type="text" id="reg-inisial" required maxlength="10" placeholder="Contoh: AFZ" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')" class="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-emerald-600 uppercase font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Jenis Kelamin</label>
+                        <select id="reg-jk" required class="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-emerald-600">
+                            <option value="L">Laki-laki (Guru Pondok)</option>
+                            <option value="P">Perempuan (Ummi Asrama)</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">No. HP / WhatsApp</label>
+                    <input type="tel" id="reg-hp" required placeholder="0812xxxxxxxx" class="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-emerald-600">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Password</label>
+                        <input type="password" id="reg-pass" required minlength="4" class="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-emerald-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Konfirmasi Password</label>
+                        <input type="password" id="reg-pass2" required minlength="4" class="w-full px-4 py-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-emerald-600">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-lg transition shadow">Daftar Sekarang</button>
+            </form>
+        </section>
+
+        <!-- 4. DASHBOARD GURU / UMMI -->
+        <section id="view-guru" class="hidden space-y-6">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="guru-role-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">GURU PONDOK (PUTRA)</span>
+                        <span id="guru-kepala-badge" class="hidden px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">KEPALA PONDOK</span>
+                    </div>
+                    <h2 class="text-xl font-bold mt-1" id="guru-welcome-name">Nama Guru</h2>
+                    <p class="text-xs text-slate-500" id="guru-wali-info">Wali Kelas: -</p>
+                </div>
+                <div class="text-right text-xs text-slate-500">
+                    <p>Tanggal Hari Ini:</p>
+                    <p class="font-bold text-slate-700 text-sm" id="guru-today-date"></p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="flex overflow-x-auto border-b border-slate-200">
+                    <button onclick="switchGuruTab('kegiatan')" id="gtab-btn-kegiatan" class="px-5 py-3.5 text-sm whitespace-nowrap tab-active">
+                        <i class="fas fa-book-open mr-2"></i>1. Absensi Kegiatan Harian
+                    </button>
+                    <button onclick="switchGuruTab('sholat')" id="gtab-btn-sholat" class="px-5 py-3.5 text-sm whitespace-nowrap text-slate-600 hover:bg-slate-50">
+                        <i class="fas fa-mosque mr-2"></i>2. Tidak Hadir Sholat
+                    </button>
+                    <button onclick="switchGuruTab('kepala-keg')" id="gtab-btn-kepala-keg" class="hidden px-5 py-3.5 text-sm whitespace-nowrap text-amber-700 font-semibold hover:bg-amber-50">
+                        <i class="fas fa-inbox mr-2"></i>3. Rekap Laporan Kegiatan
+                    </button>
+                    <button onclick="switchGuruTab('kepala-absen')" id="gtab-btn-kepala-absen" class="hidden px-5 py-3.5 text-sm whitespace-nowrap text-amber-900 font-semibold hover:bg-amber-50">
+                        <i class="fas fa-user-clock mr-2"></i>4. Tidak Hadir ke Pesantren (Kepala)
+                    </button>
+                    <button onclick="switchGuruTab('santri')" id="gtab-btn-santri" class="px-5 py-3.5 text-sm whitespace-nowrap text-slate-600 hover:bg-slate-50">
+                        <i class="fas fa-users mr-2"></i>5. Pendataan Santri (Wali Kelas)
+                    </button>
+                </div>
+
+                <!-- TAB 1: ABSENSI KEGIATAN -->
+                <div id="gtab-kegiatan" class="p-6 space-y-5">
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-800">
+                        <i class="fas fa-info-circle mr-1"></i> Laporan absensi kegiatan (Belajar Pagi, Belajar Subuh, Majelis Taklim, Belajar Malam) terkumpul secara online di <strong>Kepala Pondok / Kepala Asrama</strong> sebelum diteruskan ke Pimpinan.
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Tanggal Kegiatan</label>
+                            <input type="date" id="keg-tanggal" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Jenis Kegiatan</label>
+                            <select id="keg-jenis" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                <option value="Belajar Pagi">Belajar Pagi</option>
+                                <option value="Belajar Subuh">Belajar Subuh</option>
+                                <option value="Majelis Taklim">Majelis Taklim</option>
+                                <option value="Belajar Malam">Belajar Malam</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Pilih Kelas</label>
+                            <select id="keg-kelas" onchange="loadSantriChecklist('keg')" class="w-full px-3 py-2 border rounded-lg text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Metode Pencatatan</label>
+                            <select id="keg-metode" onchange="toggleInputMethod('keg')" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                <option value="manual">Ketik Manual (Banyak Nama)</option>
+                                <option value="checklist">Pilih dari Data Santri Kelas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="keg-manual-box">
+                        <label class="block text-xs font-bold mb-1">Daftar Nama Tidak Hadir (Pisahkan per baris / Enter)</label>
+                        <textarea id="keg-manual-text" rows="5" placeholder="Contoh:&#10;Kholil&#10;Syaiful&#10;Sholihin" class="w-full p-3 border rounded-lg text-sm font-mono"></textarea>
+                    </div>
+
+                    <div id="keg-checklist-box" class="hidden">
+                        <label class="block text-xs font-bold mb-2">Centang Santri yang Tidak Hadir:</label>
+                        <div id="keg-checklist-items" class="grid grid-cols-1 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-3 border rounded-lg bg-slate-50"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold mb-1">Keterangan / Jenis Pelanggaran (Opsional)</label>
+                        <input type="text" id="keg-ket" placeholder="Contoh: Alfa tanpa keterangan" class="w-full px-3 py-2 border rounded-lg text-sm">
+                    </div>
+
+                    <button onclick="submitLaporanKegiatan()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-6 py-2.5 rounded-lg shadow text-sm">
+                        <i class="fas fa-paper-plane mr-2"></i>Kirim Laporan ke Kepala
+                    </button>
+                </div>
+
+                <!-- TAB 2: TIDAK HADIR SHOLAT -->
+                <div id="gtab-sholat" class="hidden p-6 space-y-5">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+                        <i class="fas fa-bolt mr-1"></i> Laporan ketidakhadiran Sholat 5 Waktu <strong>langsung terkirim real-time ke Pimpinan</strong> dan otomatis masuk ke Arsip.
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Tanggal Sholat</label>
+                            <input type="date" id="sho-tanggal" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Waktu Sholat</label>
+                            <select id="sho-waktu" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                <option value="Subuh">Sholat Subuh</option>
+                                <option value="Dzuhur">Sholat Dzuhur</option>
+                                <option value="Ashar">Sholat Ashar</option>
+                                <option value="Maghrib">Sholat Maghrib</option>
+                                <option value="Isya">Sholat Isya</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Pilih Kelas</label>
+                            <select id="sho-kelas" onchange="loadSantriChecklist('sho')" class="w-full px-3 py-2 border rounded-lg text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Metode Pencatatan</label>
+                            <select id="sho-metode" onchange="toggleInputMethod('sho')" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                <option value="manual">Ketik Manual (Banyak Nama)</option>
+                                <option value="checklist">Pilih dari Data Santri Kelas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="sho-manual-box">
+                        <label class="block text-xs font-bold mb-1">Daftar Nama Tidak Hadir Sholat (Pisahkan per baris)</label>
+                        <textarea id="sho-manual-text" rows="5" placeholder="Contoh:&#10;Kholil&#10;Saddam&#10;Andi" class="w-full p-3 border rounded-lg text-sm font-mono"></textarea>
+                    </div>
+
+                    <div id="sho-checklist-box" class="hidden">
+                        <label class="block text-xs font-bold mb-2">Centang Santri yang Tidak Hadir Sholat:</label>
+                        <div id="sho-checklist-items" class="grid grid-cols-1 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-3 border rounded-lg bg-slate-50"></div>
+                    </div>
+
+                    <button onclick="submitLaporanSholat()" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-6 py-2.5 rounded-lg shadow text-sm">
+                        <i class="fas fa-paper-plane mr-2"></i>Kirim Langsung ke Pimpinan
+                    </button>
+                </div>
+
+                <!-- TAB 3: KEPALA PONDOK / ASRAMA - REKAP KEGIATAN -->
+                <div id="gtab-kepala-keg" class="hidden p-6 space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">Inbox Laporan Masuk dari Guru / Ummi</h3>
+                            <p class="text-xs text-slate-500">Laporan yang sudah diteruskan ke Pimpinan akan otomatis hilang dari inbox dan masuk ke Arsip Kepala di bawah.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <input type="date" id="kepala-filter-tgl" onchange="renderKepalaInbox()" class="px-3 py-1.5 border rounded-lg text-xs">
+                            <select id="kepala-filter-keg" onchange="renderKepalaInbox()" class="px-3 py-1.5 border rounded-lg text-xs">
+                                <option value="ALL">Semua Kegiatan</option>
+                                <option value="Belajar Pagi">Belajar Pagi</option>
+                                <option value="Belajar Subuh">Belajar Subuh</option>
+                                <option value="Majelis Taklim">Majelis Taklim</option>
+                                <option value="Belajar Malam">Belajar Malam</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm border-collapse border border-slate-200">
+                            <thead class="bg-slate-100 text-slate-700">
+                                <tr>
+                                    <th class="border p-2.5 text-left">Tanggal</th>
+                                    <th class="border p-2.5 text-left">Kegiatan</th>
+                                    <th class="border p-2.5 text-left">Kelas</th>
+                                    <th class="border p-2.5 text-left">Santri Tidak Hadir</th>
+                                    <th class="border p-2.5 text-left">Pelapor</th>
+                                    <th class="border p-2.5 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kepala-inbox-tbody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3 pt-2">
+                        <button onclick="previewPdfKepala()" class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-semibold">
+                            <i class="fas fa-file-pdf mr-2 text-red-400"></i>Preview & Download PDF (Inbox Aktif)
+                        </button>
+                        <button onclick="teruskanKePimpinan()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow">
+                            <i class="fas fa-share-square mr-2"></i>Kirim Semua ke Pimpinan & Arsipkan
+                        </button>
+                    </div>
+
+                    <!-- BAGIAN ARSIP KEPALA -->
+                    <div class="border-t pt-6 space-y-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div>
+                                <h4 class="font-bold text-base text-slate-800"><i class="fas fa-archive text-amber-700 mr-2"></i>Arsip Laporan Terkirim & Terdahulu</h4>
+                                <p class="text-xs text-slate-500">Cari berdasarkan nama santri, jenis kegiatan, atau rentang tanggal, lalu cetak PDF arsip.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border">
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Cari Nama Santri / Kegiatan</label>
+                                <input type="text" id="arsip-kepala-q" onkeyup="renderArsipKepala()" placeholder="Ketik nama santri..." class="w-full p-2 border rounded-lg text-xs bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Dari Tanggal</label>
+                                <input type="date" id="arsip-kepala-start" onchange="renderArsipKepala()" class="w-full p-2 border rounded-lg text-xs bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Sampai Tanggal</label>
+                                <input type="date" id="arsip-kepala-end" onchange="renderArsipKepala()" class="w-full p-2 border rounded-lg text-xs bg-white">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="previewPdfArsipKepala()" class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-2 px-3 rounded-lg text-xs">
+                                    <i class="fas fa-file-pdf mr-1"></i> Download PDF Arsip
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs sm:text-sm border-collapse border border-slate-200">
+                                <thead class="bg-slate-100 text-slate-700">
+                                    <tr>
+                                        <th class="border p-2.5 text-left">Tanggal</th>
+                                        <th class="border p-2.5 text-left">Kegiatan</th>
+                                        <th class="border p-2.5 text-left">Kelas</th>
+                                        <th class="border p-2.5 text-left">Santri Tidak Hadir</th>
+                                        <th class="border p-2.5 text-left">Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="arsip-kepala-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: KEPALA PONDOK / ASRAMA - TIDAK HADIR KE PESANTREN -->
+                <div id="gtab-kepala-absen" class="hidden p-6 space-y-5">
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-amber-900 space-y-1">
+                        <h4 class="font-bold text-sm"><i class="fas fa-user-clock mr-1"></i> Pencatatan Santri/Santriah yang Tidak Hadir ke Pesantren</h4>
+                        <p>Catat santri yang absen/tidak hadir ke pesantren dalam durasi tertentu (1 hari s.d. berbulan-bulan, atau rentang kalender), dengan atau tanpa alasan. Langsung terkirim real-time ke Pimpinan.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Pilih Kelas</label>
+                            <select id="abs-pesantren-kelas" onchange="loadSantriChecklistPesantren()" class="w-full px-3 py-2 border rounded-lg text-sm bg-white"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Durasi Ketidakhadiran</label>
+                            <select id="abs-pesantren-durasi" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                <option value="1 Hari">1 Hari</option>
+                                <option value="2 Hari">2 Hari</option>
+                                <option value="3 Hari">3 Hari</option>
+                                <option value="4 Hari">4 Hari</option>
+                                <option value="5 Hari">5 Hari</option>
+                                <option value="1 Minggu">1 Minggu</option>
+                                <option value="2 Minggu">2 Minggu</option>
+                                <option value="1 Bulan">1 Bulan</option>
+                                <option value="Lebih dari 1 Bulan">Lebih dari 1 Bulan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Mulai Tanggal (Kalender)</label>
+                            <input type="date" id="abs-pesantren-tgl" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Metode Pencatatan</label>
+                            <select id="abs-pesantren-metode" onchange="togglePesantrenMethod()" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                <option value="manual">Ketik Manual (Banyak Nama)</option>
+                                <option value="checklist">Pilih dari Data Santri Kelas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="abs-pesantren-manual-box">
+                        <label class="block text-xs font-bold mb-1">Daftar Nama Santri (Pisahkan per baris / Enter)</label>
+                        <textarea id="abs-pesantren-manual-text" rows="4" placeholder="Contoh:&#10;Kholil&#10;Syaiful" class="w-full p-3 border rounded-lg text-sm font-mono"></textarea>
+                    </div>
+
+                    <div id="abs-pesantren-checklist-box" class="hidden">
+                        <label class="block text-xs font-bold mb-2">Centang Santri:</label>
+                        <div id="abs-pesantren-checklist-items" class="grid grid-cols-1 sm:grid-cols-3 gap-2 max-h-50 overflow-y-auto p-3 border rounded-lg bg-white"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold mb-1">Alasan / Keterangan (Opsional)</label>
+                        <input type="text" id="abs-pesantren-alasan" placeholder="Contoh: Sakit / Izin keperluan keluarga / Tanpa Keterangan (Alfa)" class="w-full px-3 py-2 border rounded-lg text-sm">
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="submitLaporanTidakHadirPesantren()" class="bg-amber-700 hover:bg-amber-800 text-white font-bold px-6 py-2.5 rounded-lg shadow text-sm">
+                            <i class="fas fa-paper-plane mr-2"></i>Kirim Laporan ke Pimpinan
+                        </button>
+                        <button onclick="previewPdfAbsenPesantrenKepala()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-lg shadow text-sm">
+                            <i class="fas fa-file-pdf mr-2 text-red-400"></i>Download PDF Laporan Ini
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TAB 5: PENDATAAN SANTRI WALI KELAS -->
+                <div id="gtab-santri" class="hidden p-6 space-y-6">
+                    <div id="wali-kelas-guard" class="hidden bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
+                        Anda belum ditugaskan sebagai Wali Kelas oleh Pimpinan. Hubungi Pimpinan untuk penetapan Wali Kelas.
+                    </div>
+
+                    <div id="wali-kelas-panel" class="space-y-6">
+                        <form onsubmit="saveSantri(event)" class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+                            <h4 class="font-bold text-sm text-emerald-800" id="form-santri-title">Tambah Data Santri / Santriah</h4>
+                            <input type="hidden" id="san-id">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Kelas Ampuan</label>
+                                    <select id="san-kelas" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Nama Lengkap Santri</label>
+                                    <input type="text" id="san-nama" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Jenis Kelamin</label>
+                                    <input type="text" id="san-jk-display" readonly class="w-full px-3 py-2 border rounded-lg text-sm bg-slate-100 font-semibold">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Nama Ayah</label>
+                                    <input type="text" id="san-ayah" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Nama Ibu</label>
+                                    <input type="text" id="san-ibu" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">No. HP Orang Tua</label>
+                                    <input type="tel" id="san-hp" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs font-bold mb-1">Alamat Lengkap</label>
+                                    <input type="text" id="san-alamat" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1" id="san-tempat-label">Tempat Pondok / Banjar / Asrama</label>
+                                    <input type="text" id="san-tempat" required placeholder="Contoh: Banjar 3 / Asrama 2" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-2 rounded-lg text-sm font-bold">Simpan Data Santri</button>
+                                <button type="button" onclick="resetSantriForm()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm">Batal</button>
+                            </div>
+                        </form>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs sm:text-sm border-collapse border border-slate-200">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="border p-2">Kelas</th>
+                                        <th class="border p-2 text-left">Nama Santri</th>
+                                        <th class="border p-2 text-left">Orang Tua (Ayah/Ibu)</th>
+                                        <th class="border p-2">No. HP Ortu</th>
+                                        <th class="border p-2 text-left">Alamat</th>
+                                        <th class="border p-2">Pondok/Asrama</th>
+                                        <th class="border p-2 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wali-santri-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. DASHBOARD PIMPINAN / ADMIN -->
+        <section id="view-admin" class="hidden space-y-6">
+            <div class="bg-emerald-900 text-white p-5 rounded-xl shadow flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <span class="text-xs bg-amber-400 text-emerald-950 font-bold px-2.5 py-0.5 rounded-full">PANEL PIMPINAN (REAL-TIME)</span>
+                    <h2 class="text-xl font-bold mt-1">Dashboard Kendali Pondok & Asrama</h2>
+                </div>
+                <div class="text-xs text-emerald-200">
+                    Pondok Pesantren Ali Baharuddin Padang Lawas
+                </div>
+            </div>
+
+            <!-- Admin Tabs -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="flex overflow-x-auto border-b border-slate-200 text-xs sm:text-sm">
+                    <button onclick="switchAdminTab(1)" id="atab-btn-1" class="px-4 py-3 whitespace-nowrap tab-active">1. Lap. Kegiatan</button>
+                    <button onclick="switchAdminTab(2)" id="atab-btn-2" class="px-4 py-3 whitespace-nowrap text-slate-600">2. Lap. Sholat</button>
+                    <button onclick="switchAdminTab(3)" id="atab-btn-3" class="px-4 py-3 whitespace-nowrap text-slate-600">3. Tidak Hadir Pesantren</button>
+                    <button onclick="switchAdminTab(4)" id="atab-btn-4" class="px-4 py-3 whitespace-nowrap text-slate-600">4. Guru/Ummi & Kepala</button>
+                    <button onclick="switchAdminTab(5)" id="atab-btn-5" class="px-4 py-3 whitespace-nowrap text-slate-600">5. KOP Surat</button>
+                    <button onclick="switchAdminTab(6)" id="atab-btn-6" class="px-4 py-3 whitespace-nowrap text-slate-600">6. Beranda</button>
+                    <button onclick="switchAdminTab(7)" id="atab-btn-7" class="px-4 py-3 whitespace-nowrap text-slate-600">7. Arsip Laporan</button>
+                    <button onclick="switchAdminTab(8)" id="atab-btn-8" class="px-4 py-3 whitespace-nowrap text-slate-600">8. Master Santri</button>
+                    <button onclick="switchAdminTab(9)" id="atab-btn-9" class="px-4 py-3 whitespace-nowrap text-slate-600">9. Kelola Kelas</button>
+                    <button onclick="switchAdminTab(10)" id="atab-btn-10" class="px-4 py-3 whitespace-nowrap text-slate-600">10. Jejak Pelanggaran</button>
+                </div>
+
+                <!-- ADMIN TAB 1: LAPORAN KEGIATAN -->
+                <div id="atab-1" class="p-6 space-y-4">
+                    <h3 class="font-bold text-lg">Laporan Ketidakhadiran Kegiatan (Terkirim dari Kepala Pondok / Asrama)</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Unit</label>
+                            <select id="adm-keg-unit" onchange="renderAdminKegiatan()" class="w-full p-2 border rounded-lg text-xs">
+                                <option value="L">Pondok (Putra)</option>
+                                <option value="P">Asrama (Putri)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Kegiatan</label>
+                            <select id="adm-keg-jenis" onchange="renderAdminKegiatan()" class="w-full p-2 border rounded-lg text-xs">
+                                <option value="ALL">Semua Kegiatan</option>
+                                <option value="Belajar Pagi">Belajar Pagi</option>
+                                <option value="Belajar Subuh">Belajar Subuh</option>
+                                <option value="Majelis Taklim">Majelis Taklim</option>
+                                <option value="Belajar Malam">Belajar Malam</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Dari Tanggal</label>
+                            <input type="date" id="adm-keg-start" onchange="renderAdminKegiatan()" class="w-full p-2 border rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Sampai Tanggal</label>
+                            <input type="date" id="adm-keg-end" onchange="renderAdminKegiatan()" class="w-full p-2 border rounded-lg text-xs">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="previewPdfAdminKegiatan()" class="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-3 rounded-lg text-xs">
+                                <i class="fas fa-eye mr-1"></i> Preview & PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm border-collapse border">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="border p-2">Tanggal</th>
+                                    <th class="border p-2">Unit</th>
+                                    <th class="border p-2">Kegiatan</th>
+                                    <th class="border p-2">Kelas</th>
+                                    <th class="border p-2 text-left">Nama Tidak Hadir</th>
+                                    <th class="border p-2 text-left">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adm-keg-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADMIN TAB 2: LAPORAN SHOLAT -->
+                <div id="atab-2" class="hidden p-6 space-y-4">
+                    <h3 class="font-bold text-lg">Laporan Ketidakhadiran Sholat 5 Waktu</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Unit</label>
+                            <select id="adm-sho-unit" onchange="renderAdminSholat()" class="w-full p-2 border rounded-lg text-xs">
+                                <option value="L">Pondok (Putra)</option>
+                                <option value="P">Asrama (Putri)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Waktu Sholat</label>
+                            <select id="adm-sho-waktu" onchange="renderAdminSholat()" class="w-full p-2 border rounded-lg text-xs">
+                                <option value="ALL">Semua Waktu</option>
+                                <option value="Subuh">Subuh</option>
+                                <option value="Dzuhur">Dzuhur</option>
+                                <option value="Ashar">Ashar</option>
+                                <option value="Maghrib">Maghrib</option>
+                                <option value="Isya">Isya</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Dari Tanggal</label>
+                            <input type="date" id="adm-sho-start" onchange="renderAdminSholat()" class="w-full p-2 border rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Sampai Tanggal</label>
+                            <input type="date" id="adm-sho-end" onchange="renderAdminSholat()" class="w-full p-2 border rounded-lg text-xs">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="previewPdfAdminSholat()" class="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-3 rounded-lg text-xs">
+                                <i class="fas fa-eye mr-1"></i> Preview & PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm border-collapse border">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="border p-2">Tanggal</th>
+                                    <th class="border p-2">Waktu Sholat</th>
+                                    <th class="border p-2">Kelas</th>
+                                    <th class="border p-2 text-left">Nama Tidak Hadir</th>
+                                    <th class="border p-2">Pelapor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adm-sho-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADMIN TAB 3: LAPORAN TIDAK HADIR KE PESANTREN -->
+                <div id="atab-3" class="hidden p-6 space-y-4">
+                    <h3 class="font-bold text-lg">Laporan Santri/Santriah yang Tidak Hadir ke Pesantren</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Unit</label>
+                            <select id="adm-absen-unit" onchange="renderAdminAbsenPesantren()" class="w-full p-2 border rounded-lg text-xs bg-white">
+                                <option value="L">Pondok (Putra)</option>
+                                <option value="P">Asrama (Putri)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Dari Tanggal (Mulai)</label>
+                            <input type="date" id="adm-absen-start" onchange="renderAdminAbsenPesantren()" class="w-full p-2 border rounded-lg text-xs bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Sampai Tanggal</label>
+                            <input type="date" id="adm-absen-end" onchange="renderAdminAbsenPesantren()" class="w-full p-2 border rounded-lg text-xs bg-white">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="previewPdfAdminAbsenPesantren()" class="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-3 rounded-lg text-xs">
+                                <i class="fas fa-file-pdf mr-1"></i> Preview & PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm border-collapse border">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="border p-2">Tanggal Mulai</th>
+                                    <th class="border p-2">Unit</th>
+                                    <th class="border p-2">Kelas</th>
+                                    <th class="border p-2">Durasi Tidak Hadir</th>
+                                    <th class="border p-2 text-left">Nama Santri</th>
+                                    <th class="border p-2 text-left">Alasan / Keterangan</th>
+                                    <th class="border p-2">Pelapor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adm-absen-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADMIN TAB 4: GURU/UMMI -->
+                <div id="atab-4" class="hidden p-6 space-y-4">
+                    <h3 class="font-bold text-lg">Pendaftaran Guru Pondok & Ummi Asrama</h3>
+                    <p class="text-xs text-slate-500">Verifikasi akun pendaftar, tetapkan Kepala Pondok & Kepala Asrama, serta tentukan Wali Kelas.</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm border-collapse border">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="border p-2 text-left">Nama & Inisial</th>
+                                    <th class="border p-2">Gender</th>
+                                    <th class="border p-2">No. HP</th>
+                                    <th class="border p-2">Status</th>
+                                    <th class="border p-2">Jabatan Kepala</th>
+                                    <th class="border p-2">Wali Kelas Ampuan</th>
+                                    <th class="border p-2 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adm-users-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADMIN TAB 5: KOP SURAT -->
+                <div id="atab-5" class="hidden p-6 space-y-4">
+                    <h3 class="font-bold text-lg">Pengaturan KOP Surat Resmi (1 Logo)</h3>
+                    <form onsubmit="saveKopConfig(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Judul Utama KOP (Huruf Lebih Besar)</label>
+                                <input type="text" id="kop-utama" required class="w-full p-2.5 border rounded-lg text-sm font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Sub-Judul KOP</label>
+                                <input type="text" id="kop-sub" required class="w-full p-2.5 border rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Alamat KOP Surat</label>
+                                <input type="text" id="kop-alamat" required class="w-full p-2.5 border rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Upload Logo KOP (JPG, JPEG, PNG - 1 Logo)</label>
+                                <input type="file" accept=".jpg,.jpeg,.png" onchange="handleLogoUpload(event, 'kop')" class="w-full p-2 border rounded-lg text-xs bg-slate-50">
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Nama Pimpinan Pondok Pesantren</label>
+                                <input type="text" id="kop-pimpinan" required class="w-full p-2.5 border rounded-lg text-sm font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Nama Kepala Pondok (Putra)</label>
+                                <input type="text" id="kop-kepala-pondok" required class="w-full p-2.5 border rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Nama Kepala Asrama (Putri)</label>
+                                <input type="text" id="kop-kepala-asrama" required class="w-full p-2.5 border rounded-lg text-sm">
+                            </div>
+                            <div class="pt-4">
+                                <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-6 py-2.5 rounded-lg text-sm shadow">Simpan Pengaturan KOP</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ADMIN TAB 6: BERANDA -->
+                <div id="atab-6" class="hidden p-6 space-y-4">
+                    <h3 class="font-bold text-lg">Pengaturan Tampilan Beranda (Home)</h3>
+                    <form onsubmit="saveHomeConfig(event)" class="max-w-2xl space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Judul Navbar</label>
+                            <input type="text" id="cfg-nav-title" class="w-full p-2.5 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Judul Utama Hero Beranda</label>
+                            <input type="text" id="cfg-home-heading" class="w-full p-2.5 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Deskripsi Beranda</label>
+                            <textarea id="cfg-home-desc" rows="3" class="w-full p-2.5 border rounded-lg text-sm"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Upload Logo Beranda & Navbar</label>
+                            <input type="file" accept=".jpg,.jpeg,.png" onchange="handleLogoUpload(event, 'home')" class="w-full p-2 border rounded-lg text-xs">
+                        </div>
+                        <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-6 py-2.5 rounded-lg text-sm">Simpan Perubahan Beranda</button>
+                    </form>
+                </div>
+
+                <!-- ADMIN TAB 7: ARSIP -->
+                <div id="atab-7" class="hidden p-6 space-y-4">
+                    <h3 class="font-bold text-lg">Arsip Terpadu Semua Laporan</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Cari Nama Santri / Kegiatan</label>
+                            <input type="text" id="arsip-search" onkeyup="renderAdminArsip()" placeholder="Ketik nama santri..." class="w-full p-2 border rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Dari Tanggal</label>
+                            <input type="date" id="arsip-start" onchange="renderAdminArsip()" class="w-full p-2 border rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Sampai Tanggal</label>
+                            <input type="date" id="arsip-end" onchange="renderAdminArsip()" class="w-full p-2 border rounded-lg text-xs">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="previewPdfArsip()" class="w-full bg-slate-800 text-white font-bold py-2 px-3 rounded-lg text-xs">
+                                <i class="fas fa-download mr-1"></i> Download PDF Arsip
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm border-collapse border">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="border p-2">Tanggal</th>
+                                    <th class="border p-2">Kategori</th>
+                                    <th class="border p-2">Unit & Kelas</th>
+                                    <th class="border p-2 text-left">Nama Santri Tidak Hadir</th>
+                                    <th class="border p-2">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adm-arsip-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADMIN TAB 8: MASTER SANTRI -->
+                <div id="atab-8" class="hidden p-6 space-y-4">
+                    <h3 class="font-bold text-lg">Master Data Santri & Santriah</h3>
+                    <div class="flex flex-col sm:flex-row gap-3 items-center">
+                        <select id="master-san-kelas" onchange="renderMasterSantri()" class="p-2.5 border rounded-lg text-sm bg-white w-full sm:w-auto">
+                            <option value="ALL">Semua Kelas</option>
+                        </select>
+                        <div class="flex flex-grow w-full gap-2">
+                            <input type="text" id="master-san-search" placeholder="Cari nama santri..." class="flex-grow p-2.5 border rounded-lg text-sm bg-white">
+                            <button onclick="renderMasterSantri()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-1.5 shadow">
+                                <i class="fas fa-search"></i> <span class="hidden sm:inline">Cari</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm border-collapse border">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="border p-2">Kelas</th>
+                                    <th class="border p-2 text-left">Nama</th>
+                                    <th class="border p-2">L/P</th>
+                                    <th class="border p-2 text-left">Ayah & Ibu</th>
+                                    <th class="border p-2">No. HP Ortu</th>
+                                    <th class="border p-2 text-left">Alamat</th>
+                                    <th class="border p-2">Pondok / Asrama</th>
+                                </tr>
+                            </thead>
+                            <tbody id="master-san-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADMIN TAB 9: KELOLA KELAS -->
+                <div id="atab-9" class="hidden p-6 space-y-5">
+                    <h3 class="font-bold text-lg">Penambahan Kelas & Penentuan Wali Kelas</h3>
+                    <form onsubmit="saveKelasAdmin(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border">
+                        <input type="hidden" id="kls-id-edit">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Nama Kelas</label>
+                            <input type="text" id="kls-nama" required placeholder="Contoh: I-11" class="w-full p-2 border rounded-lg text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Kategori Gender</label>
+                            <select id="kls-gender" class="w-full p-2 border rounded-lg text-sm bg-white">
+                                <option value="L">Pondok (Laki-laki)</option>
+                                <option value="P">Asrama (Perempuan)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Wali Kelas</label>
+                            <select id="kls-wali" class="w-full p-2 border rounded-lg text-sm bg-white">
+                                <option value="">-- Pilih Wali Kelas --</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <button type="submit" id="kls-btn-submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 px-3 rounded-lg text-sm">+ Tambah Kelas</button>
+                            <button type="button" id="kls-btn-cancel" onclick="resetKelasForm()" class="hidden bg-slate-300 hover:bg-slate-400 text-slate-700 py-2 px-3 rounded-lg text-sm">Batal</button>
+                        </div>
+                    </form>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm border-collapse border">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="border p-2.5 text-left">Nama Kelas</th>
+                                    <th class="border p-2.5">Unit / Gender</th>
+                                    <th class="border p-2.5 text-left">Wali Kelas</th>
+                                    <th class="border p-2.5 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adm-kelas-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADMIN TAB 10: JEJAK PELANGGARAN -->
+                <div id="atab-10" class="hidden p-6 space-y-4">
+                    <h3 class="font-bold text-lg">Jejak Pelanggaran & Ketidakhadiran Santri-Santriah</h3>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="jejak-nama" placeholder="Ketik nama santri/santriah..." class="flex-grow p-2.5 border rounded-lg text-sm">
+                        <select id="jejak-unit" class="p-2.5 border rounded-lg text-sm">
+                            <option value="L">Unit Pondok (Putra - TTD Kepala Pondok)</option>
+                            <option value="P">Unit Asrama (Putri - TTD Kepala Asrama)</option>
+                        </select>
+                        <button onclick="cariJejakPelanggaran()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-6 py-2.5 rounded-lg text-sm">
+                            <i class="fas fa-search mr-1"></i> Cari Jejak
+                        </button>
+                        <button onclick="previewPdfJejak()" class="bg-red-700 hover:bg-red-800 text-white font-bold px-5 py-2.5 rounded-lg text-sm">
+                            <i class="fas fa-file-pdf mr-1"></i> Preview & Download PDF
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm border-collapse border">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="border p-2">No</th>
+                                    <th class="border p-2">Tanggal</th>
+                                    <th class="border p-2">Nama Santri</th>
+                                    <th class="border p-2">Kelas</th>
+                                    <th class="border p-2">Jenis Kegiatan / Sholat</th>
+                                    <th class="border p-2 text-left">Keterangan Pelanggaran</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jejak-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL EDIT USER -->
+    <div id="modal-edit-user" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
+            <h3 class="font-bold text-lg">Edit Data & Jabatan Guru/Ummi</h3>
+            <input type="hidden" id="edit-u-id">
+            <div>
+                <label class="block text-xs font-bold mb-1">Nama Lengkap</label>
+                <input type="text" id="edit-u-nama" class="w-full p-2 border rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold mb-1">No. HP / WhatsApp</label>
+                <input type="text" id="edit-u-hp" class="w-full p-2 border rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold mb-1">Jabatan Kepala</label>
+                <select id="edit-u-kepala" class="w-full p-2 border rounded-lg text-sm">
+                    <option value="false">Bukan Kepala (Guru/Ummi Biasa)</option>
+                    <option value="true">Tetapkan sebagai Kepala Pondok / Kepala Asrama</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold mb-1">Wali Kelas Ampuan (Bisa Pilih Banyak):</label>
+                <div id="edit-u-kelas-list" class="max-h-40 overflow-y-auto border p-2 rounded-lg space-y-1 bg-slate-50 text-sm"></div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-edit-user')" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Batal</button>
+                <button onclick="saveEditUser()" class="px-4 py-2 bg-emerald-700 text-white font-bold rounded-lg text-sm">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT LAPORAN KEPALA -->
+    <div id="modal-edit-lap" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
+            <h3 class="font-bold text-lg">Edit Laporan Masuk</h3>
+            <input type="hidden" id="edit-lap-id">
+            <div>
+                <label class="block text-xs font-bold mb-1">Daftar Nama Santri Tidak Hadir (Per baris)</label>
+                <textarea id="edit-lap-santri" rows="5" class="w-full p-2 border rounded-lg text-sm font-mono"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold mb-1">Keterangan</label>
+                <input type="text" id="edit-lap-ket" class="w-full p-2 border rounded-lg text-sm">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('modal-edit-lap')" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Batal</button>
+                <button onclick="saveEditLap()" class="px-4 py-2 bg-emerald-700 text-white font-bold rounded-lg text-sm">Simpan Perubahan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PDF PREVIEW -->
+    <div id="modal-pdf" class="hidden fixed inset-0 bg-black/70 z-50 flex flex-col">
+        <div class="bg-slate-900 text-white px-6 py-3 flex justify-between items-center">
+            <span class="font-bold text-sm"><i class="fas fa-file-pdf text-red-400 mr-2"></i>Pratinjau Dokumen Resmi</span>
+            <div class="flex gap-3">
+                <button onclick="downloadActivePdf()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-lg text-xs">
+                    <i class="fas fa-download mr-1"></i> Download PDF Sekarang
+                </button>
+                <button onclick="closeModal('modal-pdf')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-xs">Tutup</button>
+            </div>
+        </div>
+        <div class="flex-grow overflow-y-auto p-4 sm:p-8 bg-slate-600">
+            <div id="pdf-render-area" class="pdf-sheet"></div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-900 text-slate-400 text-center py-4 text-xs mt-12 border-t border-slate-800">
+        &copy; <span id="footer-year">2026</span> Sistem Pelaporan Kegiatan Pondok & Asrama — <strong>Pondok Pesantren Ali Baharuddin Padang Lawas</strong>. All Rights Reserved.
+    </footer>
+
+    <!-- FIREBASE REAL-TIME SYNC & APPLICATION LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA13cQT_hBhzNYIvRenfUnrYocOoD191V4",
+            authDomain: "ponpes-ali-baharuddin-9bfad.firebaseapp.com",
+            projectId: "ponpes-ali-baharuddin-9bfad",
+            storageBucket: "ponpes-ali-baharuddin-9bfad.firebasestorage.app",
+            messagingSenderId: "383573814973",
+            appId: "1:383573814973:web:8f3917285fe8cd86e2d1d4",
+            measurementId: "G-KKTYEXJC0T"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const firestore = getFirestore(app);
+
+        // Referensi Dokumen di dalam Koleksi Firestore: "Data Ali Baharuddin"
+        const FIRESTORE_COLLECTION = "Data Ali Baharuddin";
+        const docConfigRef = doc(firestore, FIRESTORE_COLLECTION, "pelaporan_config_master");
+        const docLaporanRef = doc(firestore, FIRESTORE_COLLECTION, "pelaporan_data_laporan");
+
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        const initialKelas = [
+            { id: 'k-1', nama: 'I-1', gender: 'L', waliId: '' },
+            { id: 'k-2', nama: 'I-2', gender: 'L', waliId: '' },
+            { id: 'k-3', nama: 'I-3', gender: 'L', waliId: '' },
+            { id: 'k-4', nama: 'I-4', gender: 'L', waliId: '' },
+            { id: 'k-5', nama: 'I-5', gender: 'L', waliId: '' },
+            { id: 'k-6', nama: 'I-6', gender: 'L', waliId: '' },
+            { id: 'k-7', nama: 'I-7', gender: 'P', waliId: '' },
+            { id: 'k-8', nama: 'I-8', gender: 'P', waliId: '' },
+            { id: 'k-9', nama: 'I-9', gender: 'P', waliId: '' },
+            { id: 'k-10', nama: 'I-10', gender: 'P', waliId: '' },
+            { id: 'k-11', nama: 'II-1', gender: 'L', waliId: '' },
+            { id: 'k-12', nama: 'II-2', gender: 'L', waliId: '' },
+            { id: 'k-13', nama: 'II-3', gender: 'L', waliId: '' },
+            { id: 'k-14', nama: 'II-4', gender: 'L', waliId: '' },
+            { id: 'k-15', nama: 'II-5', gender: 'L', waliId: '' },
+            { id: 'k-16', nama: 'II-6', gender: 'P', waliId: '' },
+            { id: 'k-17', nama: 'II-7', gender: 'P', waliId: '' },
+            { id: 'k-18', nama: 'II-8', gender: 'P', waliId: '' },
+            { id: 'k-19', nama: 'III-1', gender: 'L', waliId: '' },
+            { id: 'k-20', nama: 'III-2', gender: 'L', waliId: '' },
+            { id: 'k-21', nama: 'III-3', gender: 'L', waliId: '' },
+            { id: 'k-22', nama: 'III-4', gender: 'L', waliId: '' },
+            { id: 'k-23', nama: 'III-5', gender: 'P', waliId: '' },
+            { id: 'k-24', nama: 'III-6', gender: 'P', waliId: '' },
+            { id: 'k-25', nama: 'III-7', gender: 'P', waliId: '' },
+            { id: 'k-26', nama: 'IV-1', gender: 'L', waliId: '' },
+            { id: 'k-27', nama: 'IV-2', gender: 'L', waliId: '' },
+            { id: 'k-28', nama: 'IV-3', gender: 'P', waliId: '' },
+            { id: 'k-29', nama: 'IV-4', gender: 'P', waliId: '' },
+            { id: 'k-30', nama: 'V-1', gender: 'L', waliId: '' },
+            { id: 'k-31', nama: 'V-2', gender: 'P', waliId: '' },
+            { id: 'k-32', nama: 'V-3', gender: 'P', waliId: '' },
+            { id: 'k-33', nama: 'VI-1', gender: 'L', waliId: '' },
+            { id: 'k-34', nama: 'VI-2', gender: 'P', waliId: '' }
+        ];
+
+        const defaultDB = {
+            config: {
+                navTitle: 'PONPES ALI BAHARUDDIN',
+                homeHeading: 'Sistem Pelaporan Pencatatan Kegiatan Pondok & Asrama',
+                homeDesc: 'Portal digital terpadu Pondok Pesantren Ali Baharuddin Padang Lawas untuk pencatatan kehadiran kegiatan Belajar Pagi, Belajar Subuh, Majelis Taklim, Belajar Malam, Sholat 5 Waktu, ketidakhadiran ke pesantren, serta rekapitulasi pelanggaran santri dan santriah.',
+                homeLogo: 'https://via.placeholder.com/110/ffffff/065f46?text=AB',
+                kopUtama: 'YAYASAN PONDOK PESANTREN ALI BAHARUDDIN',
+                kopSub: 'KEPENGASUHAN SANTRI PUTRA (PONDOK) DAN PUTRI (ASRAMA)',
+                kopAlamat: 'Jl. Lintas Padang Lawas - Sumatera Utara | Telp. (0636) 000000',
+                kopLogo: 'https://via.placeholder.com/90/ffffff/000000?text=LOGO',
+                namaPimpinan: 'KH. Ali Baharuddin',
+                namaKepalaPondok: 'Ust. Muhammad Rizki, S.Pd.I',
+                namaKepalaAsrama: 'Ustadzah Siti Aminah, S.Ag'
+            },
+            users: [
+                { id: 'u-admin', nama: 'Administrator Pimpinan', inisial: 'ADMIN', email: 'alibaharuddin.ponpes@gmail.com', hp: '08120000000', jk: 'L', pass: 'Pimpinan01', role: 'admin', verified: true, isKepala: false, waliKelas: [] },
+                { id: 'u-kp', nama: 'Ust. Muhammad Rizki, S.Pd.I', inisial: 'RIZKI', hp: '08121111111', jk: 'L', pass: '123456', role: 'guru', verified: true, isKepala: true, waliKelas: ['k-1'] },
+                { id: 'u-ka', nama: 'Ustadzah Siti Aminah, S.Ag', inisial: 'AMINAH', hp: '08122222222', jk: 'P', pass: '123456', role: 'guru', verified: true, isKepala: true, waliKelas: ['k-7'] }
+            ],
+            kelas: initialKelas,
+            santri: [
+                { id: 's-1', kelasId: 'k-1', nama: 'Kholil', jk: 'L', ayah: 'H. Sulaiman', ibu: 'Hj. Fatimah', hp: '0813111111', alamat: 'Sibuhuan, Padang Lawas', tempat: 'Banjar 1' },
+                { id: 's-2', kelasId: 'k-7', nama: 'Aisyah', jk: 'P', ayah: 'Zulkifli', ibu: 'Nurhayati', hp: '0813333333', alamat: 'Sosa', tempat: 'Asrama 1' }
+            ],
+            laporanKegiatan: [],
+            laporanSholat: [],
+            laporanTidakHadirPesantren: []
+        };
+
+        let db = JSON.parse(JSON.stringify(defaultDB));
+        let currentUser = JSON.parse(sessionStorage.getItem('pp_user')) || null;
+        let currentView = 'home';
+        let configLoaded = false;
+        let laporanLoaded = false;
+
+        function setSyncIndicator(state) {
+            const el = document.getElementById('cloud-status');
+            if (!el) return;
+            if (state === 'syncing') {
+                el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span> Menyimpan...`;
+            } else if (state === 'online') {
+                el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Online • Sinkron`;
+            } else {
+                el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> Offline`;
+            }
+        }
+
+        // SIMPAN DATA KE FIRESTORE CLOUD (REAL-TIME KE SEMUA DEVICE)
+        async function saveDB() {
+            setSyncIndicator('syncing');
+            try {
+                await Promise.all([
+                    setDoc(docConfigRef, {
+                        config: db.config,
+                        users: db.users,
+                        kelas: db.kelas,
+                        santri: db.santri,
+                        updatedAt: new Date().toISOString()
+                    }),
+                    setDoc(docLaporanRef, {
+                        laporanKegiatan: db.laporanKegiatan,
+                        laporanSholat: db.laporanSholat,
+                        laporanTidakHadirPesantren: db.laporanTidakHadirPesantren,
+                        updatedAt: new Date().toISOString()
+                    })
+                ]);
+                setSyncIndicator('online');
+            } catch (err) {
+                console.error("Gagal menyinkronkan ke Firestore:", err);
+                setSyncIndicator('offline');
+                alert("Gagal menyimpan ke database online. Periksa koneksi internet atau aturan Firestore Rules Anda.");
+            }
+        }
+
+        // LISTENER REAL-TIME DOKUMEN KONFIGURASI, USER, KELAS & SANTRI
+        onSnapshot(docConfigRef, async (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                if (data.config) db.config = { ...defaultDB.config, ...data.config };
+                if (data.users) db.users = data.users;
+                if (data.kelas) db.kelas = data.kelas;
+                if (data.santri) db.santri = data.santri;
+            } else {
+                // Pertama kali aplikasi berjalan: unggah struktur awal ke Firestore
+                await setDoc(docConfigRef, {
+                    config: defaultDB.config,
+                    users: defaultDB.users,
+                    kelas: defaultDB.kelas,
+                    santri: defaultDB.santri,
+                    updatedAt: new Date().toISOString()
+                });
+            }
+            configLoaded = true;
+            onCloudDataUpdated();
+        }, (error) => {
+            console.error("Firestore Config Listener Error:", error);
+            document.getElementById('sync-loading').classList.add('hidden');
+            setSyncIndicator('offline');
+        });
+
+        // LISTENER REAL-TIME DOKUMEN LAPORAN KEGIATAN, SHOLAT & KETIDAKHADIRAN
+        onSnapshot(docLaporanRef, async (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                db.laporanKegiatan = data.laporanKegiatan || [];
+                db.laporanSholat = data.laporanSholat || [];
+                db.laporanTidakHadirPesantren = data.laporanTidakHadirPesantren || [];
+            } else {
+                await setDoc(docLaporanRef, {
+                    laporanKegiatan: [],
+                    laporanSholat: [],
+                    laporanTidakHadirPesantren: [],
+                    updatedAt: new Date().toISOString()
+                });
+            }
+            laporanLoaded = true;
+            onCloudDataUpdated();
+        }, (error) => {
+            console.error("Firestore Laporan Listener Error:", error);
+            document.getElementById('sync-loading').classList.add('hidden');
+            setSyncIndicator('offline');
+        });
+
+        function onCloudDataUpdated() {
+            if (configLoaded && laporanLoaded) {
+                document.getElementById('sync-loading').classList.add('hidden');
+                setSyncIndicator('online');
+            }
+
+            if (currentUser) {
+                const freshUser = db.users.find(u => u.id === currentUser.id);
+                if (freshUser) {
+                    currentUser = freshUser;
+                    sessionStorage.setItem('pp_user', JSON.stringify(freshUser));
+                }
+            }
+
+            applyBranding();
+
+            // Perbarui tampilan aktif secara real-time saat perangkat lain mengirim data
+            if (currentView === 'guru' && currentUser) {
+                refreshGuruLiveViews();
+            } else if (currentView === 'admin' && currentUser) {
+                refreshAdminLiveViews();
+            }
+        }
+
+        function refreshGuruLiveViews() {
+            const isPutra = currentUser.jk === 'L';
+            const kBadge = document.getElementById('guru-kepala-badge');
+            const kTabKeg = document.getElementById('gtab-btn-kepala-keg');
+            const kTabAbsen = document.getElementById('gtab-btn-kepala-absen');
+
+            if (currentUser.isKepala) {
+                kBadge.innerText = isPutra ? 'KEPALA PONDOK' : 'KEPALA ASRAMA';
+                kBadge.classList.remove('hidden');
+                kTabKeg.classList.remove('hidden');
+                kTabAbsen.classList.remove('hidden');
+                renderKepalaInbox();
+                renderArsipKepala();
+            } else {
+                kBadge.classList.add('hidden');
+                kTabKeg.classList.add('hidden');
+                kTabAbsen.classList.add('hidden');
+            }
+
+            const waliNames = db.kelas.filter(k => currentUser.waliKelas.includes(k.id)).map(k => k.nama);
+            document.getElementById('guru-wali-info').innerText = 'Wali Kelas Ampuan: ' + (waliNames.length ? waliNames.join(', ') : 'Bukan Wali Kelas');
+            initWaliKelasTab();
+        }
+
+        function refreshAdminLiveViews() {
+            renderAdminKegiatan();
+            renderAdminSholat();
+            renderAdminAbsenPesantren();
+            renderAdminUsers();
+            renderAdminArsip();
+            renderMasterSantri();
+            renderAdminKelas();
+        }
+
+        function formatIndoDate(dateString) {
+            if (!dateString) return '-';
+            const bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            const d = new Date(dateString);
+            return `${d.getDate()} ${bulan[d.getMonth()]} ${d.getFullYear()}`;
+        }
+
+        function toggleMenu() {
+            document.getElementById('dropdown-menu').classList.toggle('hidden');
+        }
+
+        window.addEventListener('click', (e) => {
+            const toggleBtn = document.getElementById('menu-toggle');
+            const dropMenu = document.getElementById('dropdown-menu');
+            if (toggleBtn && dropMenu && !toggleBtn.contains(e.target) && !dropMenu.contains(e.target)) {
+                dropMenu.classList.add('hidden');
+            }
+        });
+
+        function navigate(view) {
+            currentView = view;
+            document.getElementById('dropdown-menu').classList.add('hidden');
+            ['home', 'login', 'register', 'guru', 'admin'].forEach(v => {
+                document.getElementById('view-' + v).classList.add('hidden');
+            });
+            document.getElementById('view-' + view).classList.remove('hidden');
+
+            if (view === 'guru') initGuruDashboard();
+            if (view === 'admin') initAdminDashboard();
+        }
+
+        function goToDashboard() {
+            if (!currentUser) return navigate('login');
+            navigate(currentUser.role === 'admin' ? 'admin' : 'guru');
+        }
+
+        function applyBranding() {
+            document.getElementById('nav-title').innerText = db.config.navTitle;
+            document.getElementById('nav-logo').src = db.config.homeLogo;
+            document.getElementById('home-logo').src = db.config.homeLogo;
+            document.getElementById('home-heading').innerText = db.config.homeHeading;
+            document.getElementById('home-desc').innerText = db.config.homeDesc;
+            document.getElementById('footer-year').innerText = new Date().getFullYear();
+
+            if (currentUser) {
+                document.getElementById('user-badge').innerText = currentUser.inisial;
+                document.getElementById('menu-dashboard').classList.remove('hidden');
+                document.getElementById('menu-logout-wrap').classList.remove('hidden');
+                document.getElementById('menu-login').classList.add('hidden');
+                document.getElementById('menu-register').classList.add('hidden');
+            } else {
+                document.getElementById('user-badge').innerText = 'Menu';
+                document.getElementById('menu-dashboard').classList.add('hidden');
+                document.getElementById('menu-logout-wrap').classList.add('hidden');
+                document.getElementById('menu-login').classList.remove('hidden');
+                document.getElementById('menu-register').classList.remove('hidden');
+            }
+        }
+
+        // AUTH
+        async function handleRegister(e) {
+            e.preventDefault();
+            const nama = document.getElementById('reg-nama').value.trim();
+            const inisial = document.getElementById('reg-inisial').value.trim().toUpperCase();
+            const jk = document.getElementById('reg-jk').value;
+            const hp = document.getElementById('reg-hp').value.trim();
+            const pass = document.getElementById('reg-pass').value;
+            const pass2 = document.getElementById('reg-pass2').value;
+
+            if (pass !== pass2) return alert('Konfirmasi password tidak cocok!');
+            if (db.users.some(u => u.inisial === inisial)) return alert('Inisial sudah terdaftar!');
+
+            db.users.push({
+                id: 'u-' + Date.now(),
+                nama, inisial, hp, jk, pass,
+                role: 'guru',
+                verified: false,
+                isKepala: false,
+                waliKelas: []
+            });
+            await saveDB();
+            alert('Pendaftaran berhasil dikirim ke database online! Menunggu verifikasi Pimpinan.');
+            e.target.reset();
+            navigate('login');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const userInp = document.getElementById('login-username').value.trim();
+            const passInp = document.getElementById('login-password').value;
+
+            const found = db.users.find(u => {
+                const matchInisial = u.inisial && u.inisial.toUpperCase() === userInp.toUpperCase();
+                const matchNama = u.nama && u.nama.toUpperCase() === userInp.toUpperCase();
+                const matchEmail = u.email && u.email.toLowerCase() === userInp.toLowerCase();
+                return (matchInisial || matchNama || matchEmail) && u.pass === passInp;
+            });
+
+            if (!found) return alert('Username/Inisial/Email atau Password salah!');
+            if (!found.verified) return alert('Akun Anda belum diverifikasi oleh Pimpinan!');
+
+            currentUser = found;
+            sessionStorage.setItem('pp_user', JSON.stringify(found));
+            applyBranding();
+            goToDashboard();
+        }
+
+        function logout() {
+            currentUser = null;
+            sessionStorage.removeItem('pp_user');
+            applyBranding();
+            navigate('home');
+        }
+
+        // DASHBOARD GURU
+        function initGuruDashboard() {
+            currentUser = db.users.find(u => u.id === currentUser.id) || currentUser;
+            const isPutra = currentUser.jk === 'L';
+
+            document.getElementById('guru-welcome-name').innerText = currentUser.nama;
+            document.getElementById('guru-today-date').innerText = formatIndoDate(todayStr);
+            document.getElementById('guru-role-badge').innerText = isPutra ? 'GURU PONDOK (LAKI-LAKI)' : 'UMMI ASRAMA (PEREMPUAN)';
+            document.getElementById('guru-role-badge').className = isPutra
+                ? 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800'
+                : 'px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800';
+
+            const kBadge = document.getElementById('guru-kepala-badge');
+            const kTabKeg = document.getElementById('gtab-btn-kepala-keg');
+            const kTabAbsen = document.getElementById('gtab-btn-kepala-absen');
+
+            if (currentUser.isKepala) {
+                kBadge.innerText = isPutra ? 'KEPALA PONDOK' : 'KEPALA ASRAMA';
+                kBadge.classList.remove('hidden');
+                kTabKeg.classList.remove('hidden');
+                kTabAbsen.classList.remove('hidden');
+            } else {
+                kBadge.classList.add('hidden');
+                kTabKeg.classList.add('hidden');
+                kTabAbsen.classList.add('hidden');
+            }
+
+            const waliNames = db.kelas.filter(k => currentUser.waliKelas.includes(k.id)).map(k => k.nama);
+            document.getElementById('guru-wali-info').innerText = 'Wali Kelas Ampuan: ' + (waliNames.length ? waliNames.join(', ') : 'Bukan Wali Kelas');
+
+            const allowedKelas = db.kelas.filter(k => k.gender === currentUser.jk);
+            ['keg-kelas', 'sho-kelas', 'abs-pesantren-kelas'].forEach(selId => {
+                const sel = document.getElementById(selId);
+                if (sel) sel.innerHTML = allowedKelas.map(k => `<option value="${k.id}">Kelas ${k.nama}</option>`).join('');
+            });
+
+            document.getElementById('keg-tanggal').value = todayStr;
+            document.getElementById('sho-tanggal').value = todayStr;
+            const absTgl = document.getElementById('abs-pesantren-tgl');
+            if (absTgl) absTgl.value = todayStr;
+
+            loadSantriChecklist('keg');
+            loadSantriChecklist('sho');
+            loadSantriChecklistPesantren();
+            initWaliKelasTab();
+            if (currentUser.isKepala) {
+                renderKepalaInbox();
+                renderArsipKepala();
+            }
+        }
+
+        function switchGuruTab(tab) {
+            ['kegiatan', 'sholat', 'kepala-keg', 'kepala-absen', 'santri'].forEach(t => {
+                const el = document.getElementById('gtab-' + t);
+                const btn = document.getElementById('gtab-btn-' + t);
+                if (el) el.classList.add('hidden');
+                if (btn) btn.classList.remove('tab-active');
+            });
+            const targetEl = document.getElementById('gtab-' + tab);
+            const targetBtn = document.getElementById('gtab-btn-' + tab);
+            if (targetEl) targetEl.classList.remove('hidden');
+            if (targetBtn) targetBtn.classList.add('tab-active');
+        }
+
+        function toggleInputMethod(prefix) {
+            const metode = document.getElementById(prefix + '-metode').value;
+            document.getElementById(prefix + '-manual-box').classList.toggle('hidden', metode !== 'manual');
+            document.getElementById(prefix + '-checklist-box').classList.toggle('hidden', metode !== 'checklist');
+        }
+
+        function togglePesantrenMethod() {
+            const metode = document.getElementById('abs-pesantren-metode').value;
+            document.getElementById('abs-pesantren-manual-box').classList.toggle('hidden', metode !== 'manual');
+            document.getElementById('abs-pesantren-checklist-box').classList.toggle('hidden', metode !== 'checklist');
+        }
+
+        function loadSantriChecklist(prefix) {
+            const kelasId = document.getElementById(prefix + '-kelas').value;
+            const list = db.santri.filter(s => s.kelasId === kelasId);
+            const box = document.getElementById(prefix + '-checklist-items');
+            if (!box) return;
+            if (!list.length) {
+                box.innerHTML = '<p class="text-xs text-slate-400 col-span-3">Belum ada data santri di kelas ini.</p>';
+                return;
+            }
+            box.innerHTML = list.map(s => `
+                <label class="flex items-center space-x-2 p-2 bg-white border rounded cursor-pointer hover:bg-emerald-50 text-xs">
+                    <input type="checkbox" name="${prefix}-chk" value="${s.nama}" class="rounded text-emerald-600">
+                    <span>${s.nama}</span>
+                </label>
+            `).join('');
+        }
+
+        function loadSantriChecklistPesantren() {
+            const kelasId = document.getElementById('abs-pesantren-kelas').value;
+            const list = db.santri.filter(s => s.kelasId === kelasId);
+            const box = document.getElementById('abs-pesantren-checklist-items');
+            if (!box) return;
+            if (!list.length) {
+                box.innerHTML = '<p class="text-xs text-slate-400 col-span-3">Belum ada data santri di kelas ini.</p>';
+                return;
+            }
+            box.innerHTML = list.map(s => `
+                <label class="flex items-center space-x-2 p-2 bg-white border rounded cursor-pointer hover:bg-amber-50 text-xs">
+                    <input type="checkbox" name="pesantren-chk" value="${s.nama}" class="rounded text-amber-600">
+                    <span>${s.nama}</span>
+                </label>
+            `).join('');
+        }
+
+        function getAbsentNames(prefix) {
+            const metode = document.getElementById(prefix + '-metode').value;
+            if (metode === 'manual') {
+                return document.getElementById(prefix + '-manual-text').value
+                    .split('\n').map(n => n.trim()).filter(n => n.length > 0);
+            } else {
+                return Array.from(document.querySelectorAll(`input[name="${prefix}-chk"]:checked`)).map(c => c.value);
+            }
+        }
+
+        function getPesantrenAbsentNames() {
+            const metode = document.getElementById('abs-pesantren-metode').value;
+            if (metode === 'manual') {
+                return document.getElementById('abs-pesantren-manual-text').value
+                    .split('\n').map(n => n.trim()).filter(n => n.length > 0);
+            } else {
+                return Array.from(document.querySelectorAll('input[name="pesantren-chk"]:checked')).map(c => c.value);
+            }
+        }
+
+        async function submitLaporanKegiatan() {
+            const tanggal = document.getElementById('keg-tanggal').value;
+            const kegiatan = document.getElementById('keg-jenis').value;
+            const kelasId = document.getElementById('keg-kelas').value;
+            const ket = document.getElementById('keg-ket').value.trim() || 'Tidak hadir kegiatan';
+            const names = getAbsentNames('keg');
+
+            if (!kelasId) return alert('Pilih kelas terlebih dahulu!');
+            if (!names.length) return alert('Masukkan minimal 1 nama santri!');
+
+            const kelasObj = db.kelas.find(k => k.id === kelasId);
+            db.laporanKegiatan.push({
+                id: 'lk-' + Date.now(),
+                tanggal,
+                kegiatan,
+                kelasId,
+                kelasNama: kelasObj.nama,
+                gender: currentUser.jk,
+                santriNames: names,
+                keterangan: ket,
+                pelaporId: currentUser.id,
+                pelaporNama: currentUser.nama,
+                status: 'di_kepala'
+            });
+            await saveDB();
+            document.getElementById('keg-manual-text').value = '';
+            document.getElementById('keg-ket').value = '';
+            alert(`Laporan berhasil dikirim online ke ${currentUser.jk === 'L' ? 'Kepala Pondok' : 'Kepala Asrama'}!`);
+        }
+
+        async function submitLaporanSholat() {
+            const tanggal = document.getElementById('sho-tanggal').value;
+            const waktu = document.getElementById('sho-waktu').value;
+            const kelasId = document.getElementById('sho-kelas').value;
+            const names = getAbsentNames('sho');
+
+            if (!kelasId) return alert('Pilih kelas terlebih dahulu!');
+            if (!names.length) return alert('Masukkan minimal 1 nama santri!');
+
+            const kelasObj = db.kelas.find(k => k.id === kelasId);
+            db.laporanSholat.push({
+                id: 'ls-' + Date.now(),
+                tanggal,
+                waktu,
+                kelasId,
+                kelasNama: kelasObj.nama,
+                gender: currentUser.jk,
+                santriNames: names,
+                pelaporNama: currentUser.nama
+            });
+            await saveDB();
+            document.getElementById('sho-manual-text').value = '';
+            alert(`Laporan Sholat ${waktu} langsung terkirim real-time ke Pimpinan & Arsip!`);
+        }
+
+        async function submitLaporanTidakHadirPesantren() {
+            const kelasId = document.getElementById('abs-pesantren-kelas').value;
+            const durasi = document.getElementById('abs-pesantren-durasi').value;
+            const tanggalMulai = document.getElementById('abs-pesantren-tgl').value;
+            const alasan = document.getElementById('abs-pesantren-alasan').value.trim() || 'Izin / Tidak Hadir ke Pesantren';
+            const names = getPesantrenAbsentNames();
+
+            if (!kelasId) return alert('Pilih kelas terlebih dahulu!');
+            if (!tanggalMulai) return alert('Tentukan tanggal mulai!');
+            if (!names.length) return alert('Masukkan minimal 1 nama santri!');
+
+            const kelasObj = db.kelas.find(k => k.id === kelasId);
+            db.laporanTidakHadirPesantren.push({
+                id: 'lthp-' + Date.now(),
+                tanggalMulai,
+                durasi,
+                kelasId,
+                kelasNama: kelasObj.nama,
+                gender: currentUser.jk,
+                santriNames: names,
+                alasan,
+                pelaporNama: currentUser.nama
+            });
+            await saveDB();
+            document.getElementById('abs-pesantren-manual-text').value = '';
+            document.getElementById('abs-pesantren-alasan').value = '';
+            alert('Laporan santri tidak hadir ke pesantren berhasil dikirim real-time ke Pimpinan!');
+        }
+
+        function renderKepalaInbox() {
+            const fTgl = document.getElementById('kepala-filter-tgl').value;
+            const fKeg = document.getElementById('kepala-filter-keg').value;
+            const items = db.laporanKegiatan.filter(l => {
+                if (l.gender !== currentUser.jk) return false;
+                if (l.status !== 'di_kepala') return false;
+                if (fTgl && l.tanggal !== fTgl) return false;
+                if (fKeg !== 'ALL' && l.kegiatan !== fKeg) return false;
+                return true;
+            });
+
+            const tbody = document.getElementById('kepala-inbox-tbody');
+            if (!items.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">Tidak ada laporan baru di inbox. Semua sudah diteruskan ke Pimpinan.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = items.map(l => `
+                <tr>
+                    <td class="border p-2">${formatIndoDate(l.tanggal)}</td>
+                    <td class="border p-2 font-semibold">${l.kegiatan}</td>
+                    <td class="border p-2">Kelas ${l.kelasNama}</td>
+                    <td class="border p-2">${l.santriNames.join(', ')}</td>
+                    <td class="border p-2 text-xs">${l.pelaporNama}</td>
+                    <td class="border p-2 text-center space-x-2">
+                        <button onclick="openEditLap('${l.id}')" class="text-blue-600 hover:underline text-xs font-bold">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderArsipKepala() {
+            const q = document.getElementById('arsip-kepala-q').value.toLowerCase();
+            const start = document.getElementById('arsip-kepala-start').value;
+            const end = document.getElementById('arsip-kepala-end').value;
+
+            const items = db.laporanKegiatan.filter(l => {
+                if (l.gender !== currentUser.jk) return false;
+                if (l.status !== 'di_pimpinan') return false;
+                if (start && l.tanggal < start) return false;
+                if (end && l.tanggal > end) return false;
+                if (q) {
+                    const matchName = l.santriNames.some(n => n.toLowerCase().includes(q));
+                    const matchKeg = l.kegiatan.toLowerCase().includes(q);
+                    if (!matchName && !matchKeg) return false;
+                }
+                return true;
+            });
+
+            const tbody = document.getElementById('arsip-kepala-tbody');
+            if (!items.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada arsip laporan terkirim.</td></tr>';
+                return [];
+            }
+            tbody.innerHTML = items.map(l => `
+                <tr>
+                    <td class="border p-2">${formatIndoDate(l.tanggal)}</td>
+                    <td class="border p-2 font-semibold">${l.kegiatan}</td>
+                    <td class="border p-2">Kelas ${l.kelasNama}</td>
+                    <td class="border p-2">${l.santriNames.join(', ')}</td>
+                    <td class="border p-2 text-xs">${l.keterangan}</td>
+                </tr>
+            `).join('');
+            return items;
+        }
+
+        function openEditLap(id) {
+            const l = db.laporanKegiatan.find(x => x.id === id);
+            document.getElementById('edit-lap-id').value = l.id;
+            document.getElementById('edit-lap-santri').value = l.santriNames.join('\n');
+            document.getElementById('edit-lap-ket').value = l.keterangan;
+            document.getElementById('modal-edit-lap').classList.remove('hidden');
+        }
+
+        async function saveEditLap() {
+            const id = document.getElementById('edit-lap-id').value;
+            const l = db.laporanKegiatan.find(x => x.id === id);
+            l.santriNames = document.getElementById('edit-lap-santri').value.split('\n').map(s => s.trim()).filter(Boolean);
+            l.keterangan = document.getElementById('edit-lap-ket').value;
+            await saveDB();
+            closeModal('modal-edit-lap');
+        }
+
+        async function teruskanKePimpinan() {
+            const pending = db.laporanKegiatan.filter(l => l.gender === currentUser.jk && l.status === 'di_kepala');
+            if (!pending.length) return alert('Tidak ada laporan baru di inbox untuk diteruskan!');
+            pending.forEach(l => l.status = 'di_pimpinan');
+            await saveDB();
+            alert('Semua laporan berhasil diteruskan secara real-time ke Pimpinan dan otomatis masuk ke Arsip Kepala!');
+        }
+
+        function initWaliKelasTab() {
+            const ampuan = db.kelas.filter(k => currentUser.waliKelas.includes(k.id));
+            if (!ampuan.length) {
+                document.getElementById('wali-kelas-guard').classList.remove('hidden');
+                document.getElementById('wali-kelas-panel').classList.add('hidden');
+                return;
+            }
+            document.getElementById('wali-kelas-guard').classList.add('hidden');
+            document.getElementById('wali-kelas-panel').classList.remove('hidden');
+
+            document.getElementById('san-kelas').innerHTML = ampuan.map(k => `<option value="${k.id}">Kelas ${k.nama}</option>`).join('');
+            document.getElementById('san-jk-display').value = currentUser.jk === 'L' ? 'Laki-laki (Santri)' : 'Perempuan (Santriah)';
+            document.getElementById('san-tempat-label').innerText = currentUser.jk === 'L' ? 'Tempat Pondok / Banjar' : 'Asrama';
+            renderWaliSantriTable();
+        }
+
+        async function saveSantri(e) {
+            e.preventDefault();
+            const id = document.getElementById('san-id').value;
+            const data = {
+                id: id || 's-' + Date.now(),
+                kelasId: document.getElementById('san-kelas').value,
+                nama: document.getElementById('san-nama').value.trim(),
+                jk: currentUser.jk,
+                ayah: document.getElementById('san-ayah').value.trim(),
+                ibu: document.getElementById('san-ibu').value.trim(),
+                hp: document.getElementById('san-hp').value.trim(),
+                alamat: document.getElementById('san-alamat').value.trim(),
+                tempat: document.getElementById('san-tempat').value.trim()
+            };
+
+            if (id) {
+                const idx = db.santri.findIndex(s => s.id === id);
+                db.santri[idx] = data;
+            } else {
+                db.santri.push(data);
+            }
+            await saveDB();
+            resetSantriForm();
+            loadSantriChecklist('keg');
+            loadSantriChecklist('sho');
+            loadSantriChecklistPesantren();
+        }
+
+        function resetSantriForm() {
+            document.getElementById('san-id').value = '';
+            document.getElementById('san-nama').value = '';
+            document.getElementById('san-ayah').value = '';
+            document.getElementById('san-ibu').value = '';
+            document.getElementById('san-hp').value = '';
+            document.getElementById('san-alamat').value = '';
+            document.getElementById('san-tempat').value = '';
+            document.getElementById('form-santri-title').innerText = 'Tambah Data Santri / Santriah';
+        }
+
+        function editSantri(id) {
+            const s = db.santri.find(x => x.id === id);
+            document.getElementById('san-id').value = s.id;
+            document.getElementById('san-kelas').value = s.kelasId;
+            document.getElementById('san-nama').value = s.nama;
+            document.getElementById('san-ayah').value = s.ayah;
+            document.getElementById('san-ibu').value = s.ibu;
+            document.getElementById('san-hp').value = s.hp;
+            document.getElementById('san-alamat').value = s.alamat;
+            document.getElementById('san-tempat').value = s.tempat;
+            document.getElementById('form-santri-title').innerText = 'Edit Data Santri: ' + s.nama;
+        }
+
+        async function deleteSantri(id) {
+            if (!confirm('Hapus data santri ini?')) return;
+            db.santri = db.santri.filter(s => s.id !== id);
+            await saveDB();
+        }
+
+        function renderWaliSantriTable() {
+            const list = db.santri.filter(s => currentUser.waliKelas.includes(s.kelasId));
+            const tbody = document.getElementById('wali-santri-tbody');
+            tbody.innerHTML = list.map(s => {
+                const kls = db.kelas.find(k => k.id === s.kelasId);
+                return `
+                <tr>
+                    <td class="border p-2 font-semibold">Kelas ${kls ? kls.nama : '-'}</td>
+                    <td class="border p-2 font-bold">${s.nama}</td>
+                    <td class="border p-2">${s.ayah} / ${s.ibu}</td>
+                    <td class="border p-2">${s.hp}</td>
+                    <td class="border p-2">${s.alamat}</td>
+                    <td class="border p-2">${s.tempat}</td>
+                    <td class="border p-2 text-center space-x-2">
+                        <button onclick="editSantri('${s.id}')" class="text-blue-600 hover:underline font-bold">Edit</button>
+                        <button onclick="deleteSantri('${s.id}')" class="text-red-600 hover:underline font-bold">Hapus</button>
+                    </td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-400">Belum ada data santri.</td></tr>';
+        }
+
+        // DASHBOARD PIMPINAN / ADMIN
+        function initAdminDashboard() {
+            renderAdminKegiatan();
+            renderAdminSholat();
+            renderAdminAbsenPesantren();
+            renderAdminUsers();
+            loadKopForm();
+            loadHomeForm();
+            renderAdminArsip();
+            initMasterSantri();
+            renderAdminKelas();
+        }
+
+        function switchAdminTab(num) {
+            for (let i = 1; i <= 10; i++) {
+                const el = document.getElementById('atab-' + i);
+                const btn = document.getElementById('atab-btn-' + i);
+                if (el) el.classList.add('hidden');
+                if (btn) btn.classList.remove('tab-active');
+            }
+            const targetEl = document.getElementById('atab-' + num);
+            const targetBtn = document.getElementById('atab-btn-' + num);
+            if (targetEl) targetEl.classList.remove('hidden');
+            if (targetBtn) targetBtn.classList.add('tab-active');
+        }
+
+        function renderAdminKegiatan() {
+            const unit = document.getElementById('adm-keg-unit').value;
+            const jenis = document.getElementById('adm-keg-jenis').value;
+            const start = document.getElementById('adm-keg-start').value;
+            const end = document.getElementById('adm-keg-end').value;
+
+            const rows = db.laporanKegiatan.filter(l => {
+                if (l.status !== 'di_pimpinan') return false;
+                if (l.gender !== unit) return false;
+                if (jenis !== 'ALL' && l.kegiatan !== jenis) return false;
+                if (start && l.tanggal < start) return false;
+                if (end && l.tanggal > end) return false;
+                return true;
+            });
+
+            document.getElementById('adm-keg-tbody').innerHTML = rows.map(l => `
+                <tr>
+                    <td class="border p-2">${formatIndoDate(l.tanggal)}</td>
+                    <td class="border p-2">${l.gender === 'L' ? 'Pondok' : 'Asrama'}</td>
+                    <td class="border p-2 font-semibold">${l.kegiatan}</td>
+                    <td class="border p-2">Kelas ${l.kelasNama}</td>
+                    <td class="border p-2">${l.santriNames.join(', ')}</td>
+                    <td class="border p-2">${l.keterangan}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-400">Tidak ada laporan kegiatan ditemukan.</td></tr>';
+            return rows;
+        }
+
+        function renderAdminSholat() {
+            const unit = document.getElementById('adm-sho-unit').value;
+            const waktu = document.getElementById('adm-sho-waktu').value;
+            const start = document.getElementById('adm-sho-start').value;
+            const end = document.getElementById('adm-sho-end').value;
+
+            const rows = db.laporanSholat.filter(l => {
+                if (l.gender !== unit) return false;
+                if (waktu !== 'ALL' && l.waktu !== waktu) return false;
+                if (start && l.tanggal < start) return false;
+                if (end && l.tanggal > end) return false;
+                return true;
+            });
+
+            document.getElementById('adm-sho-tbody').innerHTML = rows.map(l => `
+                <tr>
+                    <td class="border p-2">${formatIndoDate(l.tanggal)}</td>
+                    <td class="border p-2 font-bold">Sholat ${l.waktu}</td>
+                    <td class="border p-2">Kelas ${l.kelasNama}</td>
+                    <td class="border p-2">${l.santriNames.join(', ')}</td>
+                    <td class="border p-2">${l.pelaporNama}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">Tidak ada laporan sholat ditemukan.</td></tr>';
+            return rows;
+        }
+
+        function renderAdminAbsenPesantren() {
+            const unit = document.getElementById('adm-absen-unit').value;
+            const start = document.getElementById('adm-absen-start').value;
+            const end = document.getElementById('adm-absen-end').value;
+
+            const rows = db.laporanTidakHadirPesantren.filter(l => {
+                if (l.gender !== unit) return false;
+                if (start && l.tanggalMulai < start) return false;
+                if (end && l.tanggalMulai > end) return false;
+                return true;
+            });
+
+            document.getElementById('adm-absen-tbody').innerHTML = rows.map(l => `
+                <tr>
+                    <td class="border p-2">${formatIndoDate(l.tanggalMulai)}</td>
+                    <td class="border p-2">${l.gender === 'L' ? 'Pondok' : 'Asrama'}</td>
+                    <td class="border p-2">Kelas ${l.kelasNama}</td>
+                    <td class="border p-2 font-semibold text-amber-800">${l.durasi}</td>
+                    <td class="border p-2 font-bold">${l.santriNames.join(', ')}</td>
+                    <td class="border p-2">${l.alasan}</td>
+                    <td class="border p-2">${l.pelaporNama}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-400">Tidak ada laporan santri tidak hadir ke pesantren.</td></tr>';
+            return rows;
+        }
+
+        function renderAdminUsers() {
+            const gurus = db.users.filter(u => u.role === 'guru');
+            document.getElementById('adm-users-tbody').innerHTML = gurus.map(u => {
+                const waliNames = db.kelas.filter(k => u.waliKelas.includes(k.id)).map(k => 'Kelas ' + k.nama).join(', ') || '-';
+                const jabatan = u.isKepala ? (u.jk === 'L' ? 'Kepala Pondok' : 'Kepala Asrama') : 'Guru / Ummi';
+                return `
+                <tr>
+                    <td class="border p-2"><strong>${u.nama}</strong><br><span class="text-xs text-slate-500">Inisial: ${u.inisial}</span></td>
+                    <td class="border p-2 text-center">${u.jk === 'L' ? 'Laki-laki' : 'Perempuan'}</td>
+                    <td class="border p-2 text-center">${u.hp}</td>
+                    <td class="border p-2 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${u.verified ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}">
+                            ${u.verified ? 'Terverifikasi' : 'Menunggu'}
+                        </span>
+                    </td>
+                    <td class="border p-2 text-center font-semibold">${jabatan}</td>
+                    <td class="border p-2">${waliNames}</td>
+                    <td class="border p-2 text-center space-x-2">
+                        ${!u.verified ? `<button onclick="verifyUser('${u.id}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs font-bold">Verifikasi</button>` : ''}
+                        <button onclick="openEditUser('${u.id}')" class="text-blue-600 hover:underline font-bold">Edit</button>
+                        <button onclick="deleteUser('${u.id}')" class="text-red-600 hover:underline font-bold">Hapus</button>
+                    </td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-400">Belum ada pendaftar.</td></tr>';
+        }
+
+        async function verifyUser(id) {
+            const u = db.users.find(x => x.id === id);
+            u.verified = true;
+            await saveDB();
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Hapus akun ini?')) return;
+            db.users = db.users.filter(u => u.id !== id);
+            await saveDB();
+        }
+
+        function openEditUser(id) {
+            const u = db.users.find(x => x.id === id);
+            document.getElementById('edit-u-id').value = u.id;
+            document.getElementById('edit-u-nama').value = u.nama;
+            document.getElementById('edit-u-hp').value = u.hp;
+            document.getElementById('edit-u-kepala').value = String(u.isKepala);
+
+            const kelasSesuaiGender = db.kelas.filter(k => k.gender === u.jk);
+            document.getElementById('edit-u-kelas-list').innerHTML = kelasSesuaiGender.map(k => `
+                <label class="flex items-center space-x-2">
+                    <input type="checkbox" name="edit-u-kls" value="${k.id}" ${u.waliKelas.includes(k.id) ? 'checked' : ''}>
+                    <span>Kelas ${k.nama}</span>
+                </label>
+            `).join('') || '<p class="text-xs text-slate-400">Belum ada kelas.</p>';
+
+            document.getElementById('modal-edit-user').classList.remove('hidden');
+        }
+
+        async function saveEditUser() {
+            const id = document.getElementById('edit-u-id').value;
+            const u = db.users.find(x => x.id === id);
+            const setKepala = document.getElementById('edit-u-kepala').value === 'true';
+
+            if (setKepala) {
+                db.users.forEach(other => {
+                    if (other.jk === u.jk && other.id !== u.id) other.isKepala = false;
+                });
+                if (u.jk === 'L') db.config.namaKepalaPondok = document.getElementById('edit-u-nama').value;
+                else db.config.namaKepalaAsrama = document.getElementById('edit-u-nama').value;
+            }
+
+            u.nama = document.getElementById('edit-u-nama').value;
+            u.hp = document.getElementById('edit-u-hp').value;
+            u.isKepala = setKepala;
+            u.waliKelas = Array.from(document.querySelectorAll('input[name="edit-u-kls"]:checked')).map(c => c.value);
+
+            db.kelas.forEach(k => {
+                if (u.waliKelas.includes(k.id)) k.waliId = u.id;
+                else if (k.waliId === u.id) k.waliId = '';
+            });
+
+            await saveDB();
+            closeModal('modal-edit-user');
+            loadKopForm();
+        }
+
+        function loadKopForm() {
+            document.getElementById('kop-utama').value = db.config.kopUtama;
+            document.getElementById('kop-sub').value = db.config.kopSub;
+            document.getElementById('kop-alamat').value = db.config.kopAlamat;
+            document.getElementById('kop-pimpinan').value = db.config.namaPimpinan;
+            document.getElementById('kop-kepala-pondok').value = db.config.namaKepalaPondok;
+            document.getElementById('kop-kepala-asrama').value = db.config.namaKepalaAsrama;
+        }
+
+        async function saveKopConfig(e) {
+            e.preventDefault();
+            db.config.kopUtama = document.getElementById('kop-utama').value;
+            db.config.kopSub = document.getElementById('kop-sub').value;
+            db.config.kopAlamat = document.getElementById('kop-alamat').value;
+            db.config.namaPimpinan = document.getElementById('kop-pimpinan').value;
+            db.config.namaKepalaPondok = document.getElementById('kop-kepala-pondok').value;
+            db.config.namaKepalaAsrama = document.getElementById('kop-kepala-asrama').value;
+            await saveDB();
+            alert('Pengaturan KOP Surat berhasil disimpan secara online!');
+        }
+
+        function loadHomeForm() {
+            document.getElementById('cfg-nav-title').value = db.config.navTitle;
+            document.getElementById('cfg-home-heading').value = db.config.homeHeading;
+            document.getElementById('cfg-home-desc').value = db.config.homeDesc;
+        }
+
+        async function saveHomeConfig(e) {
+            e.preventDefault();
+            db.config.navTitle = document.getElementById('cfg-nav-title').value;
+            db.config.homeHeading = document.getElementById('cfg-home-heading').value;
+            db.config.homeDesc = document.getElementById('cfg-home-desc').value;
+            await saveDB();
+            applyBranding();
+            alert('Tampilan Beranda berhasil diperbarui di semua perangkat!');
+        }
+
+        function handleLogoUpload(e, target) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(ev) {
+                if (target === 'kop') db.config.kopLogo = ev.target.result;
+                if (target === 'home') db.config.homeLogo = ev.target.result;
+                await saveDB();
+                applyBranding();
+                alert('Logo berhasil diunggah & disinkronkan!');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderAdminArsip() {
+            const q = document.getElementById('arsip-search').value.toLowerCase();
+            const start = document.getElementById('arsip-start').value;
+            const end = document.getElementById('arsip-end').value;
+
+            const all = [
+                ...db.laporanKegiatan.map(l => ({ tanggal: l.tanggal, kategori: 'Kegiatan: ' + l.kegiatan, unit: (l.gender === 'L' ? 'Pondok' : 'Asrama') + ' - Kelas ' + l.kelasNama, names: l.santriNames.join(', '), ket: l.keterangan })),
+                ...db.laporanSholat.map(l => ({ tanggal: l.tanggal, kategori: 'Sholat ' + l.waktu, unit: (l.gender === 'L' ? 'Pondok' : 'Asrama') + ' - Kelas ' + l.kelasNama, names: l.santriNames.join(', '), ket: 'Tidak hadir sholat wajib' })),
+                ...db.laporanTidakHadirPesantren.map(l => ({ tanggal: l.tanggalMulai, kategori: 'Tidak Hadir ke Pesantren (' + l.durasi + ')', unit: (l.gender === 'L' ? 'Pondok' : 'Asrama') + ' - Kelas ' + l.kelasNama, names: l.santriNames.join(', '), ket: l.alasan }))
+            ].filter(item => {
+                if (start && item.tanggal < start) return false;
+                if (end && item.tanggal > end) return false;
+                if (q && !item.names.toLowerCase().includes(q) && !item.kategori.toLowerCase().includes(q)) return false;
+                return true;
+            });
+
+            document.getElementById('adm-arsip-tbody').innerHTML = all.map(a => `
+                <tr>
+                    <td class="border p-2">${formatIndoDate(a.tanggal)}</td>
+                    <td class="border p-2 font-semibold">${a.kategori}</td>
+                    <td class="border p-2">${a.unit}</td>
+                    <td class="border p-2">${a.names}</td>
+                    <td class="border p-2">${a.ket}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">Tidak ada arsip ditemukan.</td></tr>';
+            return all;
+        }
+
+        function initMasterSantri() {
+            const sel = document.getElementById('master-san-kelas');
+            sel.innerHTML = '<option value="ALL">Semua Kelas</option>' + db.kelas.map(k => `<option value="${k.id}">Kelas ${k.nama} (${k.gender === 'L' ? 'Putra' : 'Putri'})</option>`).join('');
+            renderMasterSantri();
+        }
+
+        function renderMasterSantri() {
+            const klsId = document.getElementById('master-san-kelas').value;
+            const q = document.getElementById('master-san-search').value.toLowerCase();
+            const list = db.santri.filter(s => {
+                if (klsId !== 'ALL' && s.kelasId !== klsId) return false;
+                if (q && !s.nama.toLowerCase().includes(q)) return false;
+                return true;
+            });
+            document.getElementById('master-san-tbody').innerHTML = list.map(s => {
+                const k = db.kelas.find(x => x.id === s.kelasId);
+                return `
+                <tr>
+                    <td class="border p-2">Kelas ${k ? k.nama : '-'}</td>
+                    <td class="border p-2 font-bold">${s.nama}</td>
+                    <td class="border p-2 text-center">${s.jk}</td>
+                    <td class="border p-2">${s.ayah} & ${s.ibu}</td>
+                    <td class="border p-2">${s.hp}</td>
+                    <td class="border p-2">${s.alamat}</td>
+                    <td class="border p-2">${s.tempat}</td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-400">Data santri tidak ditemukan.</td></tr>';
+        }
+
+        function renderAdminKelas() {
+            const gurus = db.users.filter(u => u.role === 'guru' && u.verified);
+            document.getElementById('kls-wali').innerHTML = '<option value="">-- Pilih Wali Kelas --</option>' + gurus.map(g => `<option value="${g.id}">${g.nama} (${g.jk === 'L' ? 'Putra' : 'Putri'})</option>`).join('');
+
+            document.getElementById('adm-kelas-tbody').innerHTML = db.kelas.map(k => {
+                const wali = db.users.find(u => u.id === k.waliId);
+                return `
+                <tr>
+                    <td class="border p-2.5 font-bold">Kelas ${k.nama}</td>
+                    <td class="border p-2.5 text-center">${k.gender === 'L' ? 'Pondok (Laki-laki)' : 'Asrama (Perempuan)'}</td>
+                    <td class="border p-2.5">${wali ? wali.nama : '<span class="text-slate-400">Belum ditentukan</span>'}</td>
+                    <td class="border p-2.5 text-center space-x-2">
+                        <button onclick="editKelas('${k.id}')" class="text-blue-600 hover:underline text-xs font-bold">Edit</button>
+                        <button onclick="deleteKelas('${k.id}')" class="text-red-600 hover:underline text-xs font-bold">Hapus</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function saveKelasAdmin(e) {
+            e.preventDefault();
+            const idEdit = document.getElementById('kls-id-edit').value;
+            const nama = document.getElementById('kls-nama').value.trim();
+            const gender = document.getElementById('kls-gender').value;
+            const waliId = document.getElementById('kls-wali').value;
+
+            if (idEdit) {
+                const k = db.kelas.find(x => x.id === idEdit);
+                k.nama = nama;
+                k.gender = gender;
+                k.waliId = waliId;
+
+                db.users.forEach(u => {
+                    if (u.id === waliId) {
+                        if (!u.waliKelas.includes(idEdit)) u.waliKelas.push(idEdit);
+                    } else {
+                        u.waliKelas = u.waliKelas.filter(kid => kid !== idEdit);
+                    }
+                });
+                alert('Kelas berhasil diperbarui!');
+            } else {
+                const newId = 'k-' + Date.now();
+                db.kelas.push({ id: newId, nama, gender, waliId });
+                if (waliId) {
+                    const u = db.users.find(x => x.id === waliId);
+                    if (u && !u.waliKelas.includes(newId)) u.waliKelas.push(newId);
+                }
+                alert('Kelas baru berhasil ditambahkan!');
+            }
+
+            await saveDB();
+            resetKelasForm();
+        }
+
+        function editKelas(id) {
+            const k = db.kelas.find(x => x.id === id);
+            document.getElementById('kls-id-edit').value = k.id;
+            document.getElementById('kls-nama').value = k.nama;
+            document.getElementById('kls-gender').value = k.gender;
+            document.getElementById('kls-wali').value = k.waliId || '';
+            document.getElementById('kls-btn-submit').innerText = 'Simpan Perubahan';
+            document.getElementById('kls-btn-cancel').classList.remove('hidden');
+        }
+
+        function resetKelasForm() {
+            document.getElementById('kls-id-edit').value = '';
+            document.getElementById('kls-nama').value = '';
+            document.getElementById('kls-gender').value = 'L';
+            document.getElementById('kls-wali').value = '';
+            document.getElementById('kls-btn-submit').innerText = '+ Tambah Kelas';
+            document.getElementById('kls-btn-cancel').classList.add('hidden');
+        }
+
+        async function deleteKelas(id) {
+            if (!confirm('Hapus kelas ini?')) return;
+            db.kelas = db.kelas.filter(k => k.id !== id);
+            db.users.forEach(u => u.waliKelas = u.waliKelas.filter(kid => kid !== id));
+            await saveDB();
+        }
+
+        let activeJejakRows = [];
+        function cariJejakPelanggaran() {
+            const q = document.getElementById('jejak-nama').value.trim().toLowerCase();
+            if (!q) return alert('Ketik nama santri/santriah terlebih dahulu!');
+            activeJejakRows = [];
+
+            db.laporanKegiatan.forEach(l => {
+                l.santriNames.forEach(n => {
+                    if (n.toLowerCase().includes(q)) {
+                        activeJejakRows.push({ tanggal: l.tanggal, nama: n, kelas: 'Kelas ' + l.kelasNama, jenis: 'Kegiatan: ' + l.kegiatan, ket: l.keterangan });
+                    }
+                });
+            });
+            db.laporanSholat.forEach(l => {
+                l.santriNames.forEach(n => {
+                    if (n.toLowerCase().includes(q)) {
+                        activeJejakRows.push({ tanggal: l.tanggal, nama: n, kelas: 'Kelas ' + l.kelasNama, jenis: 'Sholat ' + l.waktu, ket: 'Tidak hadir sholat wajib' });
+                    }
+                });
+            });
+            db.laporanTidakHadirPesantren.forEach(l => {
+                l.santriNames.forEach(n => {
+                    if (n.toLowerCase().includes(q)) {
+                        activeJejakRows.push({ tanggal: l.tanggalMulai, nama: n, kelas: 'Kelas ' + l.kelasNama, jenis: 'Tidak Hadir ke Pesantren', ket: `Durasi: ${l.durasi} (${l.alasan})` });
+                    }
+                });
+            });
+
+            document.getElementById('jejak-tbody').innerHTML = activeJejakRows.map((r, i) => `
+                <tr>
+                    <td class="border p-2 text-center">${i + 1}</td>
+                    <td class="border p-2">${formatIndoDate(r.tanggal)}</td>
+                    <td class="border p-2 font-bold">${r.nama}</td>
+                    <td class="border p-2">${r.kelas}</td>
+                    <td class="border p-2">${r.jenis}</td>
+                    <td class="border p-2">${r.ket}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-400">Tidak ditemukan catatan untuk nama tersebut.</td></tr>';
+        }
+
+        // GENERATOR KOP & TANDA TANGAN PADANG LAWAS
+        function buildKopHTML() {
+            return `
+            <div class="kop-font flex items-center border-b-4 border-double border-black pb-3 mb-5">
+                <img src="${db.config.kopLogo}" class="w-20 h-20 object-contain mr-4">
+                <div class="flex-grow text-center">
+                    <h1 style="font-size: 20px; font-weight: bold; letter-spacing: 0.5px; margin: 0;">${db.config.kopUtama}</h1>
+                    <h2 style="font-size: 14px; font-weight: bold; margin: 2px 0;">${db.config.kopSub}</h2>
+                    <p style="font-size: 11px; margin: 0;">${db.config.kopAlamat}</p>
+                </div>
+            </div>`;
+        }
+
+        function buildSignatureBlock(unitGender, includeKepala = true) {
+            const tglOtomatis = formatIndoDate(todayStr);
+            const jabatanKepala = unitGender === 'L' ? 'Kepala Pondok' : 'Kepala Asrama';
+            const namaKepala = unitGender === 'L' ? db.config.namaKepalaPondok : db.config.namaKepalaAsrama;
+
+            if (!includeKepala) {
+                return `
+                <div style="margin-top: 35px; display: flex; justify-content: flex-end; font-size: 12px;">
+                    <div style="width: 270px; text-align: left;">
+                        <p>Padang Lawas, ${tglOtomatis}</p>
+                        <p>Mengetahui,</p>
+                        <p><strong>Pimpinan Pondok Pesantren<br>Ali Baharuddin Padang Lawas</strong></p>
+                        <div style="height: 65px;"></div>
+                        <p style="font-weight: bold; text-decoration: underline;">${db.config.namaPimpinan}</p>
+                    </div>
+                </div>`;
+            }
+
+            return `
+            <div style="margin-top: 35px; display: flex; justify-content: space-between; font-size: 12px;">
+                <div style="width: 250px; text-align: left;">
+                    <p>&nbsp;</p>
+                    <p>Mengetahui,</p>
+                    <p><strong>Pimpinan Pondok Pesantren<br>Ali Baharuddin Padang Lawas</strong></p>
+                    <div style="height: 65px;"></div>
+                    <p style="font-weight: bold; text-decoration: underline;">${db.config.namaPimpinan}</p>
+                </div>
+                <div style="width: 240px; text-align: left;">
+                    <p>Padang Lawas, ${tglOtomatis}</p>
+                    <p>&nbsp;</p>
+                    <p><strong>${jabatanKepala}</strong></p>
+                    <div style="height: 65px;"></div>
+                    <p style="font-weight: bold; text-decoration: underline;">${namaKepala}</p>
+                </div>
+            </div>`;
+        }
+
+        function openPdfPreview(title, tableHtml, signatureHtml) {
+            const html = `
+                ${buildKopHTML()}
+                <div style="text-align: center; margin-bottom: 14px;">
+                    <h3 style="font-size: 15px; font-weight: bold; text-decoration: underline; text-transform: uppercase;">${title}</h3>
+                </div>
+                ${tableHtml}
+                ${signatureHtml}
+            `;
+            document.getElementById('pdf-render-area').innerHTML = html;
+            document.getElementById('modal-pdf').classList.remove('hidden');
+        }
+
+        function downloadActivePdf() {
+            const el = document.getElementById('pdf-render-area');
+            html2pdf().set({
+                margin: 0,
+                filename: `Laporan_Ponpes_Ali_Baharuddin_${todayStr}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(el).save();
+        }
+
+        function previewPdfKepala() {
+            const items = db.laporanKegiatan.filter(l => l.gender === currentUser.jk && l.status === 'di_kepala');
+            const rows = items.map((l, i) => `
+                <tr>
+                    <td style="text-align:center">${i + 1}</td>
+                    <td>${formatIndoDate(l.tanggal)}</td>
+                    <td>${l.kegiatan}</td>
+                    <td>Kelas ${l.kelasNama}</td>
+                    <td>${l.santriNames.join(', ')}</td>
+                    <td>${l.keterangan}</td>
+                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Tidak ada data</td></tr>';
+
+            const table = `<table class="pdf-table"><thead><tr><th>No</th><th>Tanggal</th><th>Kegiatan</th><th>Kelas</th><th>Santri Tidak Hadir</th><th>Keterangan</th></tr></thead><tbody>${rows}</tbody></table>`;
+            const unitLabel = currentUser.jk === 'L' ? 'PONDOK (PUTRA)' : 'ASRAMA (PUTRI)';
+            const sig = `
+            <div style="margin-top: 35px; display: flex; justify-content: flex-end; font-size: 12px;">
+                <div style="width: 250px;">
+                    <p>Padang Lawas, ${formatIndoDate(todayStr)}</p>
+                    <p><strong>${currentUser.jk === 'L' ? 'Kepala Pondok' : 'Kepala Asrama'}</strong></p>
+                    <div style="height: 65px;"></div>
+                    <p style="font-weight: bold; text-decoration: underline;">${currentUser.nama}</p>
+                </div>
+            </div>`;
+            openPdfPreview(`INBOX LAPORAN KEGIATAN AKTIF (${unitLabel})`, table, sig);
+        }
+
+        function previewPdfArsipKepala() {
+            const items = renderArsipKepala();
+            const rows = items.map((l, i) => `
+                <tr>
+                    <td style="text-align:center">${i + 1}</td>
+                    <td>${formatIndoDate(l.tanggal)}</td>
+                    <td>${l.kegiatan}</td>
+                    <td>Kelas ${l.kelasNama}</td>
+                    <td>${l.santriNames.join(', ')}</td>
+                    <td>${l.keterangan}</td>
+                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Tidak ada data arsip</td></tr>';
+
+            const table = `<table class="pdf-table"><thead><tr><th>No</th><th>Tanggal</th><th>Kegiatan</th><th>Kelas</th><th>Santri Tidak Hadir</th><th>Keterangan</th></tr></thead><tbody>${rows}</tbody></table>`;
+            const unitLabel = currentUser.jk === 'L' ? 'PONDOK (PUTRA)' : 'ASRAMA (PUTRI)';
+            const sig = `
+            <div style="margin-top: 35px; display: flex; justify-content: flex-end; font-size: 12px;">
+                <div style="width: 250px;">
+                    <p>Padang Lawas, ${formatIndoDate(todayStr)}</p>
+                    <p><strong>${currentUser.jk === 'L' ? 'Kepala Pondok' : 'Kepala Asrama'}</strong></p>
+                    <div style="height: 65px;"></div>
+                    <p style="font-weight: bold; text-decoration: underline;">${currentUser.nama}</p>
+                </div>
+            </div>`;
+            openPdfPreview(`ARSIP LAPORAN TERKIRIM ${unitLabel}`, table, sig);
+        }
+
+        function previewPdfAbsenPesantrenKepala() {
+            const items = db.laporanTidakHadirPesantren.filter(l => l.gender === currentUser.jk);
+            const rows = items.map((l, i) => `
+                <tr>
+                    <td style="text-align:center">${i + 1}</td>
+                    <td>${formatIndoDate(l.tanggalMulai)}</td>
+                    <td>Kelas ${l.kelasNama}</td>
+                    <td>${l.durasi}</td>
+                    <td>${l.santriNames.join(', ')}</td>
+                    <td>${l.alasan}</td>
+                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Tidak ada data</td></tr>';
+
+            const table = `<table class="pdf-table"><thead><tr><th>No</th><th>Tanggal Mulai</th><th>Kelas</th><th>Durasi</th><th>Nama Santri</th><th>Alasan / Keterangan</th></tr></thead><tbody>${rows}</tbody></table>`;
+            const unitLabel = currentUser.jk === 'L' ? 'PONDOK (PUTRA)' : 'ASRAMA (PUTRI)';
+            const sig = `
+            <div style="margin-top: 35px; display: flex; justify-content: flex-end; font-size: 12px;">
+                <div style="width: 250px;">
+                    <p>Padang Lawas, ${formatIndoDate(todayStr)}</p>
+                    <p><strong>${currentUser.jk === 'L' ? 'Kepala Pondok' : 'Kepala Asrama'}</strong></p>
+                    <div style="height: 65px;"></div>
+                    <p style="font-weight: bold; text-decoration: underline;">${currentUser.nama}</p>
+                </div>
+            </div>`;
+            openPdfPreview(`LAPORAN KETIDAKHADIRAN KE PESANTREN (${unitLabel})`, table, sig);
+        }
+
+        function previewPdfAdminKegiatan() {
+            const unit = document.getElementById('adm-keg-unit').value;
+            const data = renderAdminKegiatan();
+            const rows = data.map((l, i) => `
+                <tr>
+                    <td style="text-align:center">${i + 1}</td>
+                    <td>${formatIndoDate(l.tanggal)}</td>
+                    <td>${l.kegiatan}</td>
+                    <td>Kelas ${l.kelasNama}</td>
+                    <td>${l.santriNames.join(', ')}</td>
+                    <td>${l.keterangan}</td>
+                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Tidak ada data</td></tr>';
+            const table = `<table class="pdf-table"><thead><tr><th>No</th><th>Tanggal</th><th>Kegiatan</th><th>Kelas</th><th>Nama Tidak Hadir</th><th>Keterangan</th></tr></thead><tbody>${rows}</tbody></table>`;
+            openPdfPreview(`LAPORAN KETIDAKHADIRAN KEGIATAN ${unit === 'L' ? 'PONDOK' : 'ASRAMA'}`, table, buildSignatureBlock(unit, true));
+        }
+
+        function previewPdfAdminSholat() {
+            const unit = document.getElementById('adm-sho-unit').value;
+            const data = renderAdminSholat();
+            const rows = data.map((l, i) => `
+                <tr>
+                    <td style="text-align:center">${i + 1}</td>
+                    <td>${formatIndoDate(l.tanggal)}</td>
+                    <td>Sholat ${l.waktu}</td>
+                    <td>Kelas ${l.kelasNama}</td>
+                    <td>${l.santriNames.join(', ')}</td>
+                </tr>`).join('') || '<tr><td colspan="5" style="text-align:center">Tidak ada data</td></tr>';
+            const table = `<table class="pdf-table"><thead><tr><th>No</th><th>Tanggal</th><th>Waktu Sholat</th><th>Kelas</th><th>Santri Tidak Hadir</th></tr></thead><tbody>${rows}</tbody></table>`;
+            openPdfPreview(`LAPORAN KETIDAKHADIRAN SHOLAT 5 WAKTU (${unit === 'L' ? 'PONDOK' : 'ASRAMA'})`, table, buildSignatureBlock(unit, false));
+        }
+
+        function previewPdfAdminAbsenPesantren() {
+            const unit = document.getElementById('adm-absen-unit').value;
+            const data = renderAdminAbsenPesantren();
+            const rows = data.map((l, i) => `
+                <tr>
+                    <td style="text-align:center">${i + 1}</td>
+                    <td>${formatIndoDate(l.tanggalMulai)}</td>
+                    <td>Kelas ${l.kelasNama}</td>
+                    <td>${l.durasi}</td>
+                    <td>${l.santriNames.join(', ')}</td>
+                    <td>${l.alasan}</td>
+                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Tidak ada data</td></tr>';
+            const table = `<table class="pdf-table"><thead><tr><th>No</th><th>Tanggal Mulai</th><th>Kelas</th><th>Durasi</th><th>Nama Santri</th><th>Alasan</th></tr></thead><tbody>${rows}</tbody></table>`;
+            openPdfPreview(`LAPORAN SANTRI TIDAK HADIR KE PESANTREN (${unit === 'L' ? 'PONDOK' : 'ASRAMA'})`, table, buildSignatureBlock(unit, true));
+        }
+
+        function previewPdfArsip() {
+            const data = renderAdminArsip();
+            const rows = data.map((a, i) => `
+                <tr>
+                    <td style="text-align:center">${i + 1}</td>
+                    <td>${formatIndoDate(a.tanggal)}</td>
+                    <td>${a.kategori}</td>
+                    <td>${a.unit}</td>
+                    <td>${a.names}</td>
+                    <td>${a.ket}</td>
+                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Tidak ada data</td></tr>';
+            const table = `<table class="pdf-table"><thead><tr><th>No</th><th>Tanggal</th><th>Kategori</th><th>Unit & Kelas</th><th>Nama Santri</th><th>Keterangan</th></tr></thead><tbody>${rows}</tbody></table>`;
+            openPdfPreview('ARSIP REKAPITULASI LAPORAN', table, buildSignatureBlock('L', false));
+        }
+
+        function previewPdfJejak() {
+            if (!activeJejakRows.length) return alert('Cari nama santri terlebih dahulu!');
+            const unit = document.getElementById('jejak-unit').value;
+            const rows = activeJejakRows.map((r, i) => `
+                <tr>
+                    <td style="text-align:center">${i + 1}</td>
+                    <td>${formatIndoDate(r.tanggal)}</td>
+                    <td>${r.nama}</td>
+                    <td>${r.kelas}</td>
+                    <td>${r.jenis}</td>
+                    <td>${r.ket}</td>
+                </tr>`).join('');
+            const table = `<table class="pdf-table"><thead><tr><th>No</th><th>Tanggal</th><th>Nama Santri</th><th>Kelas</th><th>Jenis Laporan</th><th>Keterangan</th></tr></thead><tbody>${rows}</tbody></table>`;
+            openPdfPreview('CATATAN JEJAK PELANGGARAN & KETIDAKHADIRAN SANTRI', table, buildSignatureBlock(unit, true));
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Ekspos fungsi ke window agar atribut onclick/onsubmit di HTML berjalan di dalam <script type="module">
+        Object.assign(window, {
+            navigate, toggleMenu, goToDashboard, handleLogin, handleRegister, logout,
+            switchGuruTab, toggleInputMethod, togglePesantrenMethod, loadSantriChecklist, loadSantriChecklistPesantren,
+            submitLaporanKegiatan, submitLaporanSholat, submitLaporanTidakHadirPesantren,
+            renderKepalaInbox, renderArsipKepala, openEditLap, saveEditLap, teruskanKePimpinan,
+            saveSantri, resetSantriForm, editSantri, deleteSantri,
+            switchAdminTab, renderAdminKegiatan, renderAdminSholat, renderAdminAbsenPesantren,
+            verifyUser, deleteUser, openEditUser, saveEditUser,
+            saveKopConfig, saveHomeConfig, handleLogoUpload,
+            renderAdminArsip, renderMasterSantri, saveKelasAdmin, editKelas, resetKelasForm, deleteKelas,
+            cariJejakPelanggaran,
+            previewPdfKepala, previewPdfArsipKepala, previewPdfAbsenPesantrenKepala,
+            previewPdfAdminKegiatan, previewPdfAdminSholat, previewPdfAdminAbsenPesantren,
+            previewPdfArsip, previewPdfJejak, downloadActivePdf, closeModal
+        });
+
+        applyBranding();
+    </script>
+</body>
+</html>
